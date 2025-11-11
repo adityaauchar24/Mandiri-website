@@ -1,70 +1,56 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const User = require("../models/User");
 
-// Create User - Modified to match your frontend exactly
-router.post("/", async (req, res) => {
-    try {
-        // Add CORS headers to match frontend
-        res.header('Access-Control-Allow-Origin', '*');
-        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Origin');
-
-        const { fullName, email, phoneNumber, companyName, message } = req.body;
-
-        console.log('Received data:', { fullName, email, phoneNumber, companyName, message });
-
-        // Check if all required fields are present
-        if (!fullName || !email || !phoneNumber || !companyName || !message) {
-            return res.status(400).json({ 
-                _message: 'Please fill all fields, every field is required' 
-            });
-        }
-
-        // Create and save user
-        const newUser = new User({
-            fullName: fullName,
-            email: email,
-            phoneNumber: phoneNumber,   
-            companyName: companyName,   
-            message: message,   
-        });
-
-        const savedUser = await newUser.save();
-        console.log('User saved successfully:', savedUser._id);
-        
-        // Return success response matching your frontend expectation exactly
-        res.status(200).json({ 
-            _message: 'successfully submitted'
-        });
-
-    } catch(err) {
-        console.error('Error creating user:', err);
-        res.status(400).json({ 
-            _message: 'Failed to submit form'
-        });
-    }
+// GET all users
+router.get('/', (req, res) => {
+  res.json({
+    message: 'Get all users - Success!',
+    users: [
+      { id: 1, name: 'John Doe', email: 'john@example.com' },
+      { id: 2, name: 'Jane Smith', email: 'jane@example.com' }
+    ],
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Get all users
-router.get("/", async (req, res) => {
-    try {
-        res.header('Access-Control-Allow-Origin', '*');
-        const users = await User.find().sort({ createdAt: -1 });
-        res.status(200).json(users);
-    } catch(err) {
-        res.status(400).json({ 
-            _message: 'Failed to fetch users'
-        });
-    }
+// GET user by ID
+router.get('/:id', (req, res) => {
+  const userId = req.params.id;
+  res.json({
+    message: `Get user ${userId} - Success!`,
+    user: { id: userId, name: 'Sample User', email: 'user@example.com' },
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Handle OPTIONS preflight requests
-router.options("/", (req, res) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Allow-Origin');
-    res.sendStatus(200);
+// POST create new user
+router.post('/', (req, res) => {
+  const { name, email } = req.body;
+  res.json({
+    message: 'User created successfully!',
+    user: { id: Date.now(), name, email },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// PUT update user
+router.put('/:id', (req, res) => {
+  const userId = req.params.id;
+  const { name, email } = req.body;
+  res.json({
+    message: `User ${userId} updated successfully!`,
+    user: { id: userId, name, email },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// DELETE user
+router.delete('/:id', (req, res) => {
+  const userId = req.params.id;
+  res.json({
+    message: `User ${userId} deleted successfully!`,
+    timestamp: new Date().toISOString()
+  });
 });
 
 module.exports = router;

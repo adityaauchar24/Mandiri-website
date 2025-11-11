@@ -148,10 +148,11 @@ const HomeContactForm = (props) => {
         const phoneNumber = formFieldData && formFieldData.filter(elm => elm.title === 'Phone Number')[0].value;
         const companyName = formFieldData && formFieldData.filter(elm => elm.title === 'Company Name')[0].value;
         const message = formFieldData && formFieldData.filter(elm => elm.title === 'Message')[0].value;
+        const API_BASE = process.env.REACT_APP_API_URL;
 
         if (checkAllFeildValue) {
             try {
-               const userApiRes = await fetch(`http://localhost:5001/users`, {
+               const userApiRes = await fetch(`${API_BASE}/api/users`, {
                     method: 'POST',
                     body: JSON.stringify({
                         fullName,
@@ -164,7 +165,8 @@ const HomeContactForm = (props) => {
                         'Access-Control-Allow-Origin': '*',
                         'Content-type': 'application/json; charset=UTF-8',
                     },
-                })
+                }).then(response => response.json())
+
                 if (userApiRes.status === 200) {
                     const responseData = await userApiRes.json();
                     setShowMessage({ ...showMessage, success: true, message: responseData._message });

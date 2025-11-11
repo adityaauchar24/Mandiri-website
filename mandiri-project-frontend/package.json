@@ -4,7 +4,7 @@
   "private": true,
   "dependencies": {
     "@coreui/react": "^5.0.0",
-    "@coreui/icons-react": "^3.0.0",
+    "@coreui/icons-react": "^2.0.0",
     "@fontsource/open-sans": "^5.0.12",
     "@fontsource/roboto": "^5.0.8",
     "@mui/material": "^5.14.20",

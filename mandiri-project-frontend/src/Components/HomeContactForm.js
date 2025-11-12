@@ -1,219 +1,484 @@
-import { makeStyles } from '@material-ui/core';
-import React, { useState } from 'react'
+import React, { useState } from 'react';
 import worldDeliveryImg from '../Images/worldDeliveryImg.jpg';
-import ToastMessage from './ToastMessage';
 
-const useStyles = makeStyles(() => ({
-    HomeContactForm: {
-        width: '100%',
-        height: 710,
-        display: 'flex',
-        justifyContent: 'space-between',
-    },
-    formImg: {
-        width: '58%',
-        height: '100%',
-    },
-    contactForm: {
-        width: '42%',
-        backgroundColor: '#f5f5f5',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    formSection: {
-        borderRadius: 10,
-        '& h2': {
-            fontSize: 22,
-            textTransform: "uppercase",
-            color: '#0802A3',
-        }
-    },
-    fieldBox: {
-        display: 'flex',
-        flexDirection: 'column',
-        '& label': {
-            textAlign: 'left',
-            fontSize: 18,
-            color: '#0000008a'
+const HomeContactForm = ({ setShowMessage, showMessage }) => {
+    const [formData, setFormData] = useState({
+        fullName: '',
+        email: '',
+        phoneNumber: '',
+        companyName: '',
+        message: ''
+    });
+    const [errors, setErrors] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // API URL configuration
+    const API_BASE_URL = process.env.NODE_ENV === 'production' 
+        ? 'https://pt-international-mandiri-expo.onrender.com'
+        : 'http://localhost:5001';
+
+    const styles = {
+        container: {
+            display: 'flex',
+            minHeight: '600px',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+            margin: '2rem auto',
+            maxWidth: '1800px',
+            maxHeight: '900px',
+            width: '90%',
+            backgroundColor: '#fff',
+            height: 'auto',
+            minHeight: '700px'
         },
-        "& input": {
-            width: '400px',
-            padding: "8px 15px",
-            fontSize: 20,
-            margin: '12px 0px 10px',
-            color: '#0000008a'
+        imageSection: {
+            flex: '1',
+            minWidth: '50%',
+            background: `linear-gradient(rgba(8, 2, 163, 0.1), rgba(8, 2, 163, 0.2)), url(${worldDeliveryImg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            position: 'relative'
         },
-        '& span': {
-            fontSize: 14,
-            fontWeight: 500,
+        formSection: {
+            flex: '1',
+            minWidth: '50%',
+            padding: '2rem',
+            background: 'linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            position: 'relative',
+            overflow: 'hidden'
+        },
+        formWrapper: {
+            width: '100%',
+            maxWidth: '450px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center'
+        },
+        form: {
+            width: '100%',
+            maxWidth: '400px',
+            margin: '0 auto',
+            transition: 'transform 0.3s ease',
+            display: 'flex',
+            flexDirection: 'column'
+        },
+        heading: {
+            fontSize: 'clamp(24px, 3vw, 28px)',
+            fontWeight: '700',
             color: '#0802A3',
-            textAlign: 'start',
-            paddingBottom: 8,
-        }
-    },
-    submitBtn: {
-        margin: '15px 0',
-        textAlign: 'start',
-        "& button": {
-            padding: '15px 25px',
+            marginBottom: '2rem',
+            textAlign: 'center',
+            background: 'linear-gradient(135deg, #0802A3, #4A00E0)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            width: '100%'
+        },
+        inputGroup: {
+            marginBottom: '1.25rem',
+            width: '100%'
+        },
+        label: {
+            display: 'block',
+            marginBottom: '0.5rem',
+            fontWeight: '600',
+            color: '#2d3748',
+            fontSize: '14px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            width: '100%'
+        },
+        input: {
+            width: '100%',
+            padding: '12px 16px',
+            border: '2px solid #e2e8f0',
+            borderRadius: '8px',
+            fontSize: '16px',
+            transition: 'all 0.3s ease',
+            backgroundColor: '#fff',
+            fontFamily: 'inherit',
+            boxSizing: 'border-box'
+        },
+        textarea: {
+            width: '100%',
+            padding: '12px 16px',
+            border: '2px solid #e2e8f0',
+            borderRadius: '8px',
+            fontSize: '16px',
+            minHeight: '120px',
+            resize: 'vertical',
+            transition: 'all 0.3s ease',
+            fontFamily: 'inherit',
+            backgroundColor: '#fff',
+            boxSizing: 'border-box'
+        },
+        error: {
+            color: '#e53e3e',
+            fontSize: '14px',
+            marginTop: '0.5rem',
+            display: 'block',
+            width: '100%'
+        },
+        submitBtn: {
+            width: '100%',
+            padding: '15px',
             backgroundColor: '#0802A3',
-            borderColor: '#e60329',
-            color: '#fff',
-            cursor: 'pointer',
+            color: 'white',
             border: 'none',
-            borderRadius: 5,
-            fontSize: 15,
-            fontWeight: 600,
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            marginTop: '1rem',
+            fontFamily: 'inherit',
+            boxSizing: 'border-box'
+        },
+        submittingBtn: {
+            backgroundColor: '#4A00E0',
+            opacity: 0.7,
+            cursor: 'not-allowed'
+        },
+        successMessage: {
+            backgroundColor: '#f0fff4',
+            border: '1px solid #9ae6b4',
+            color: '#2d7745',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            textAlign: 'center',
+            width: '100%',
+            boxSizing: 'border-box'
+        },
+        errorMessage: {
+            backgroundColor: '#fed7d7',
+            border: '1px solid #feb2b2',
+            color: '#c53030',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            textAlign: 'center',
+            width: '100%',
+            boxSizing: 'border-box'
+        },
+        requiredText: {
+            marginTop: '1rem',
+            textAlign: 'center',
+            color: '#718096',
+            fontSize: '12px',
+            width: '100%'
         }
-    }
+    };
 
-}));
-const HomeContactForm = (props) => {
-    const classes = useStyles();
-    const { setShowMessage, showMessage } = props;
-    const [formFieldData, setFormFieldData] = useState([
-        {
-            title: 'Full Name',
-            type: 'text',
-            value: '',
-            error: false,
-            mess: '',
-        },
-        {
-            title: 'Email',
-            type: 'email',
-            value: '',
-            error: false,
-            mess: ''
-        },
-        {
-            title: 'Phone Number',
-            type: 'number',
-            value: '',
-            error: false,
-            mess: ''
-        },
-        {
-            title: 'Company Name',
-            type: 'text',
-            value: '',
-            error: false,
-            mess: ''
-        },
-        {
-            title: 'Message',
-            type: 'text',
-            value: '',
-            error: false,
-            mess: ''
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+        // Clear error when user starts typing
+        if (errors[field]) {
+            setErrors(prev => ({
+                ...prev,
+                [field]: ''
+            }));
         }
-    ]);
+        // Clear any message when user starts typing
+        if (showMessage) {
+            setShowMessage(null);
+        }
+    };
 
-    // feild on change function
-    const handleFormOnChange = (title, val) => {
-        const finalData = formFieldData && formFieldData.map(elm => {
-            if (elm.title === title) {
-                elm.value = val
-            }
-            return elm;
-        })
-        setFormFieldData(finalData);
-    }
+    const validateForm = () => {
+        const newErrors = {};
+        
+        if (!formData.fullName.trim()) {
+            newErrors.fullName = 'Full name is required';
+        } else if (formData.fullName.trim().length < 2) {
+            newErrors.fullName = 'Full name must be at least 2 characters';
+        }
+        
+        if (!formData.email.trim()) {
+            newErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            newErrors.email = 'Email is invalid';
+        }
+        
+        if (!formData.phoneNumber.trim()) {
+            newErrors.phoneNumber = 'Phone number is required';
+        } else if (!/^[\+]?[0-9\s\-\(\)]{10,}$/.test(formData.phoneNumber.replace(/\s/g, ''))) {
+            newErrors.phoneNumber = 'Please enter a valid phone number';
+        }
+        
+        if (!formData.companyName.trim()) {
+            newErrors.companyName = 'Company name is required';
+        }
+        
+        if (!formData.message.trim()) {
+            newErrors.message = 'Message is required';
+        } else if (formData.message.trim().length < 10) {
+            newErrors.message = 'Message must be at least 10 characters';
+        }
 
-    // form validation
-    const handleFormValidation = () => {
-        const validationData = formFieldData && formFieldData.map(elm => {
-            if (elm.value === '') {
-                elm.error = true;
-                elm.mess = `${elm.title} is required`
-            } else {
-                elm.error = false;
-                elm.mess = ''
-            }
-            return elm;
-        })
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
-        setFormFieldData(validationData);
-    }
-
-    // users post api
-    const handleContactFormSubmit = async (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        handleFormValidation();
-        const checkAllFeildValue = formFieldData && formFieldData.every(elem => elem.value !== '');
+        
+        // Clear any previous messages when starting new submission
+        setShowMessage(null);
+        setIsSubmitting(true);
 
-        const fullName = formFieldData && formFieldData.filter(elm => elm.title === 'Full Name')[0].value;
-        const email = formFieldData && formFieldData.filter(elm => elm.title === 'Email')[0].value;
-        const phoneNumber = formFieldData && formFieldData.filter(elm => elm.title === 'Phone Number')[0].value;
-        const companyName = formFieldData && formFieldData.filter(elm => elm.title === 'Company Name')[0].value;
-        const message = formFieldData && formFieldData.filter(elm => elm.title === 'Message')[0].value;
-        const API_BASE = process.env.REACT_APP_API_URL;
-
-        if (checkAllFeildValue) {
-            try {
-               const userApiRes = await fetch(`${API_BASE}/api/users`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        fullName,
-                        email,
-                        phoneNumber,
-                        companyName,
-                        message,
-                    }),
-                    headers: {
-                        'Access-Control-Allow-Origin': '*',
-                        'Content-type': 'application/json; charset=UTF-8',
-                    },
-                }).then(response => response.json())
-
-                if (userApiRes.status === 200) {
-                    const responseData = await userApiRes.json();
-                    setShowMessage({ ...showMessage, success: true, message: responseData._message });
-                } else {
-                    const errorData = await userApiRes.json();
-                    setShowMessage({ ...showMessage, error: true, message: errorData._message });
-                }
-            } catch (error) {
-                console.log(error, 'error');
-            }
-        } else {
-            setShowMessage({ ...showMessage, error: true, message: 'please fill the form Data, every field is required' });
+        if (!validateForm()) {
+            setIsSubmitting(false);
+            return;
         }
 
-        const emptyValue = formFieldData && formFieldData.map(elm => {
-           return {...elm, value : ''};
-        })
-        setFormFieldData(emptyValue);
+        try {
+            console.log('📤 Sending contact form data to:', `${API_BASE_URL}/api/users`);
+            
+            const response = await fetch(`${API_BASE_URL}/api/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    fullName: formData.fullName.trim(),
+                    email: formData.email.trim().toLowerCase(),
+                    phoneNumber: formData.phoneNumber.trim(),
+                    companyName: formData.companyName.trim(),
+                    message: formData.message.trim()
+                })
+            });
+
+            // Check if response is OK before parsing JSON
+            if (!response.ok) {
+                let errorMessage = `Server error: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch (parseError) {
+                    errorMessage = response.statusText || errorMessage;
+                }
+                throw new Error(errorMessage);
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                setShowMessage({ 
+                    success: true, 
+                    error: false, 
+                    message: result.message || 'Thank you! Your message has been sent successfully.' 
+                });
+                
+                // Reset form
+                setFormData({
+                    fullName: '',
+                    email: '',
+                    phoneNumber: '',
+                    companyName: '',
+                    message: ''
+                });
+                
+                // Clear any existing errors
+                setErrors({});
+                
+            } else {
+                throw new Error(result.message || 'Failed to send message');
+            }
+        } catch (error) {
+            console.error('❌ Error submitting form:', error);
+            
+            // Provide user-friendly error messages
+            let userFriendlyMessage = error.message;
+            
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                userFriendlyMessage = 'Cannot connect to server. Please make sure the backend is running on localhost:5001';
+            } else if (error.message.includes('Failed to fetch')) {
+                userFriendlyMessage = 'Network error: Please check if the backend server is running on http://localhost:5001';
+            } else if (error.message.includes('Network error')) {
+                userFriendlyMessage = 'Network connection issue. Please check your internet connection.';
+            }
+            
+            setShowMessage({ 
+                success: false, 
+                error: true, 
+                message: userFriendlyMessage 
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const getInputStyle = (field) => {
+        const baseStyle = styles.input;
+        if (errors[field]) {
+            return {
+                ...baseStyle,
+                border: '2px solid #e53e3e',
+                backgroundColor: '#fef5f5'
+            };
+        }
+        return baseStyle;
+    };
+
+    const getTextareaStyle = () => {
+        const baseStyle = styles.textarea;
+        if (errors.message) {
+            return {
+                ...baseStyle,
+                border: '2px solid #e53e3e',
+                backgroundColor: '#fef5f5'
+            };
+        }
+        return baseStyle;
+    };
+
+    const getButtonStyle = () => {
+        const baseStyle = styles.submitBtn;
+        if (isSubmitting) {
+            return {
+                ...baseStyle,
+                ...styles.submittingBtn
+            };
+        }
+        return baseStyle;
     };
 
     return (
-        <div className={classes.HomeContactForm}>
-
-            <img src={worldDeliveryImg} alt="worldDeliveryImg" className={classes.formImg} />
-            <div className={classes.contactForm}>
-                <form className={classes.formSection}>
-                    <h2>Contact Form</h2>
-
-                    {formFieldData && formFieldData.map((elem) => (
-                        <div className={classes.fieldBox}>
-                            <label>{elem.title}</label>
-                            <input
-                                type={elem.type}
-                                value={elem.value}
-                                onChange={(e) => handleFormOnChange(elem.title, e.target.value)}
+        <div style={styles.container}>
+            <div style={styles.imageSection} />
+            
+            <div style={styles.formSection}>
+                <div style={styles.formWrapper}>
+                    <form 
+                        style={styles.form} 
+                        onSubmit={handleSubmit}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-5px)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                    >
+                        <h2 style={styles.heading}>Get In Touch</h2>
+                        
+                        {/* Display success/error messages - Fixed: Check if showMessage exists */}
+                        {showMessage && (
+                            <div style={showMessage.success ? styles.successMessage : styles.errorMessage}>
+                                {showMessage.message}
+                            </div>
+                        )}
+                        
+                        {['fullName', 'email', 'phoneNumber', 'companyName'].map(field => (
+                            <div key={field} style={styles.inputGroup}>
+                                <label style={styles.label}>
+                                    {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                    <span style={{color: '#e53e3e'}}>*</span>
+                                </label>
+                                <input
+                                    type={field === 'email' ? 'email' : field === 'phoneNumber' ? 'tel' : 'text'}
+                                    style={getInputStyle(field)}
+                                    value={formData[field]}
+                                    onChange={(e) => handleInputChange(field, e.target.value)}
+                                    onFocus={(e) => {
+                                        if (!errors[field]) {
+                                            e.target.style.border = '2px solid #0802A3';
+                                            e.target.style.boxShadow = '0 0 0 3px rgba(8, 2, 163, 0.1)';
+                                            e.target.style.backgroundColor = '#fff';
+                                        }
+                                    }}
+                                    onBlur={(e) => {
+                                        if (!errors[field]) {
+                                            e.target.style.border = '2px solid #e2e8f0';
+                                            e.target.style.boxShadow = 'none';
+                                            e.target.style.backgroundColor = '#fff';
+                                        }
+                                    }}
+                                    disabled={isSubmitting}
+                                    placeholder={`Enter your ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`}
+                                />
+                                {errors[field] && <span style={styles.error}>{errors[field]}</span>}
+                            </div>
+                        ))}
+                        
+                        <div style={styles.inputGroup}>
+                            <label style={styles.label}>
+                                Message
+                                <span style={{color: '#e53e3e'}}>*</span>
+                            </label>
+                            <textarea
+                                style={getTextareaStyle()}
+                                value={formData.message}
+                                onChange={(e) => handleInputChange('message', e.target.value)}
+                                onFocus={(e) => {
+                                    if (!errors.message) {
+                                        e.target.style.border = '2px solid #0802A3';
+                                        e.target.style.boxShadow = '0 0 0 3px rgba(8, 2, 163, 0.1)';
+                                        e.target.style.backgroundColor = '#fff';
+                                    }
+                                }}
+                                onBlur={(e) => {
+                                    if (!errors.message) {
+                                        e.target.style.border = '2px solid #e2e8f0';
+                                        e.target.style.boxShadow = 'none';
+                                        e.target.style.backgroundColor = '#fff';
+                                    }
+                                }}
+                                disabled={isSubmitting}
+                                placeholder="Enter your message here..."
                             />
-                            {elem.error && <span> {elem.mess} </span>}
+                            {errors.message && <span style={styles.error}>{errors.message}</span>}
                         </div>
-                    ))}
-
-                    <div className={classes.submitBtn}>
-                        <button onClick={handleContactFormSubmit}>Submit</button>
-                    </div>
-                </form>
+                        
+                        <button 
+                            type="submit" 
+                            style={getButtonStyle()}
+                            disabled={isSubmitting}
+                            onMouseEnter={(e) => {
+                                if (!isSubmitting) {
+                                    e.target.style.backgroundColor = '#4A00E0';
+                                    e.target.style.transform = 'translateY(-2px)';
+                                    e.target.style.boxShadow = '0 10px 20px rgba(8, 2, 163, 0.3)';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!isSubmitting) {
+                                    e.target.style.backgroundColor = '#0802A3';
+                                    e.target.style.transform = 'translateY(0)';
+                                    e.target.style.boxShadow = 'none';
+                                }
+                            }}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <span style={{marginRight: '8px'}}>⏳</span>
+                                    Sending...
+                                </>
+                            ) : (
+                                <>
+                                    <span style={{marginRight: '8px'}}>📨</span>
+                                    Send Message
+                                </>
+                            )}
+                        </button>
+                        
+                        <div style={styles.requiredText}>
+                            * Required fields
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
-    )
-}
+    );
+};
 
-export default HomeContactForm
+export default HomeContactForm;

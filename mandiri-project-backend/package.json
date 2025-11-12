@@ -1,27 +1,32 @@
 {
-  "name": "mandiri-project-backend",
+  "name": "pt-international-mandiri-expo-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "Backend API for PT. International Mandiri Expo",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "build",
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "test": "echo \"No tests specified\" && exit 0",
+    "build": "echo \"No build process needed\""
   },
-  "author": "",
+  "keywords": [
+    "express",
+    "mongodb",
+    "api",
+    "backend"
+  ],
+  "author": "PT. International Mandiri Expo",
   "license": "ISC",
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "body-parser": "^1.19.0",
     "cors": "^2.8.5",
-    "dotenv": "^10.0.0",
-    "express": "^4.17.1",
-    "jsonwebtoken": "^9.0.1",
-    "mongodb": "^6.0.0",
-    "mongoose": "^6.0.14"
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "mongoose": "^6.8.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^2.0.20"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }

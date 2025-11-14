@@ -9,9 +9,6 @@ yarn-error.log*
 .env.local
 .env.development
 .env.production
-.env.development.local
-.env.test.local
-.env.production.local
 
 # Build outputs
 /build
@@ -31,8 +28,3 @@ Thumbs.db
 # Logs
 *.log
 logs/
-.eslintcache
-.cache/
-
-# Testing
-/coverage

@@ -109,8 +109,9 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
   const navigate = useNavigate();
 
   // API URL configuration
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-  const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api/users';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api/users';
+
 
   // Enhanced validation patterns with better international support
   const validationPatterns = useMemo(() => VALIDATION_PATTERNS, []);

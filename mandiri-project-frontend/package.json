@@ -25,66 +25,30 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "set CI=false&& set DISABLE_ESLINT_PLUGIN=true&& set GENERATE_SOURCEMAP=false&& react-scripts build",
+    "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "lint:fix": "eslint src/**/*.{js,jsx} --fix",
-    "lint": "eslint src/**/*.{js,jsx}"
+    "eject": "react-scripts eject"
   },
   "eslintConfig": {
     "extends": [
       "react-app",
       "react-app/jest"
-    ],
-    "rules": {
-      "no-unused-vars": "warn",
-      "react-hooks/exhaustive-deps": "warn",
-      "no-useless-escape": "off"
-    }
+    ]
   },
   "browserslist": {
     "production": [
       ">0.2%",
       "not dead",
-      "not op_mini all",
-      "not ie > 0",
-      "not ie_mob > 0"
+      "not op_mini all"
     ],
     "development": [
       "last 1 chrome version",
       "last 1 firefox version",
-      "last 1 safari version",
-      "last 1 edge version"
+      "last 1 safari version"
     ]
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "eslint": "^8.0.0",
-    "eslint-plugin-react": "^7.33.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "prettier": "^3.0.0",
-    "web-vitals": "^3.5.0"
-  },
-  "keywords": [
-    "react",
-    "coconut-products",
-    "export",
-    "indonesia",
-    "charcoal",
-    "briquettes",
-    "responsive",
-    "modern"
-  ],
-  "description": "PT. International Mandiri Expo - Premium Coconut Products Export Company Website",
-  "author": "PT. International Mandiri Expo",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/adityaauchar24/Mandiri-website"
-  },
-  "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
+    "@types/react-dom": "^18.2.0"
   }
 }

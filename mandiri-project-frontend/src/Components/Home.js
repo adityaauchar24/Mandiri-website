@@ -303,7 +303,6 @@ const Home = (props) => {
                 grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
                 gap: 2rem;
             }
-            
         }
         
         @media (max-width: 480px) {
@@ -331,14 +330,6 @@ const Home = (props) => {
             }
         }
     `;
-
-    // Sample stats data
-    const statsData = [
-        { number: `${animatedStats[0]}+`, label: 'Countries Served' },
-        { number: `${animatedStats[1]}+`, label: 'Happy Clients' },
-        { number: `${animatedStats[2]}+`, label: 'Years Experience' },
-        { number: animatedStats[3], label: 'Customer Support' }
-    ];
 
     // Enhanced features data
     const featuresData = [

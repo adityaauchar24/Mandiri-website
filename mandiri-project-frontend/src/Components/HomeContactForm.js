@@ -28,9 +28,7 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
             maxWidth: '1800px',
             maxHeight: '900px',
             width: '90%',
-            backgroundColor: '#fff',
-            height: 'auto',
-            minHeight: '700px'
+            backgroundColor: '#fff'
         },
         imageSection: {
             flex: '1',
@@ -211,7 +209,7 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
         
         if (!formData.phoneNumber.trim()) {
             newErrors.phoneNumber = 'Phone number is required';
-        } else if (!/^[\+]?[0-9\s\-\(\)]{10,}$/.test(formData.phoneNumber.replace(/\s/g, ''))) {
+        } else if (!/^[+]?[0-9\s\-()]{10,}$/.test(formData.phoneNumber.replace(/\s/g, ''))) {
             newErrors.phoneNumber = 'Please enter a valid phone number';
         }
         
@@ -371,7 +369,7 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                     >
                         <h2 style={styles.heading}>Get In Touch</h2>
                         
-                        {/* Display success/error messages - Fixed: Check if showMessage exists */}
+                        {/* Display success/error messages */}
                         {showMessage && (
                             <div style={showMessage.success ? styles.successMessage : styles.errorMessage}>
                                 {showMessage.message}

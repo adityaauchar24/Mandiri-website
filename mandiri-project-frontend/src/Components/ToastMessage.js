@@ -254,9 +254,8 @@ const ToastMessage = (props) => {
     // Early return if no message or not visible
     if (!message || !isVisible) return null;
 
-    // Determine toast type
+    // Determine toast type - REMOVED unused isError variable
     const isSuccess = success && !error;
-    const isError = error;
 
     return (
         <div 

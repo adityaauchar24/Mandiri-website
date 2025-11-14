@@ -109,62 +109,13 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
   const navigate = useNavigate();
 
   // API URL configuration
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api/users';
-
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api/users';
 
   // Enhanced validation patterns with better international support
   const validationPatterns = useMemo(() => VALIDATION_PATTERNS, []);
 
-  // Auto-hide success message with cleanup
-  useEffect(() => {
-    if (safeShowMessage.success) {
-      const timer = setTimeout(() => {
-        safeSetShowMessage(DEFAULT_MESSAGE_STATE);
-      }, 5000);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [safeShowMessage.success, safeSetShowMessage]);
-
-  // Validate form on data change - ENHANCED
-  useEffect(() => {
-    const hasErrors = formFieldData.some(field => field.error);
-    const requiredFieldsFilled = formFieldData
-      .filter(field => field.required)
-      .every(field => field.value.trim() !== '');
-    
-    setIsFormValid(!hasErrors && requiredFieldsFilled);
-  }, [formFieldData]);
-
-  // Navigation handler to go back to services
-  const navigateToServices = useCallback(() => {
-    navigate('/services');
-  }, [navigate]);
-
-  // Enhanced field change function with immediate validation
-  const handleFormOnChange = useCallback((title, val) => {
-    setFormFieldData(prev => prev.map(elm => {
-      if (elm.title === title) {
-        const newField = { 
-          ...elm, 
-          value: val,
-          error: false,
-          mess: ''
-        };
-        
-        // Immediate validation for touched fields
-        if (touchedFields[title]) {
-          return validateField(newField);
-        }
-        
-        return newField;
-      }
-      return elm;
-    }));
-  }, [touchedFields, validateField]);
-
-  // Field validation helper
+  // Field validation helper - MOVED BEFORE handleFormOnChange to fix "used before defined" error
   const validateField = useCallback((field) => {
     const trimmedValue = field.value.trim();
     const newField = { ...field, error: false, mess: '' };
@@ -217,6 +168,28 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
     return newField;
   }, [validationPatterns.email, validationPatterns.phone, validationPatterns.name]);
 
+  // Enhanced field change function with immediate validation
+  const handleFormOnChange = useCallback((title, val) => {
+    setFormFieldData(prev => prev.map(elm => {
+      if (elm.title === title) {
+        const newField = { 
+          ...elm, 
+          value: val,
+          error: false,
+          mess: ''
+        };
+        
+        // Immediate validation for touched fields
+        if (touchedFields[title]) {
+          return validateField(newField);
+        }
+        
+        return newField;
+      }
+      return elm;
+    }));
+  }, [touchedFields, validateField]);
+
   // Handle field blur for validation
   const handleFieldBlur = useCallback((title) => {
     setTouchedFields(prev => ({ ...prev, [title]: true }));
@@ -252,6 +225,32 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
     
     return isValid;
   }, [formFieldData, validateField]);
+
+  // Auto-hide success message with cleanup
+  useEffect(() => {
+    if (safeShowMessage.success) {
+      const timer = setTimeout(() => {
+        safeSetShowMessage(DEFAULT_MESSAGE_STATE);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [safeShowMessage.success, safeSetShowMessage]);
+
+  // Validate form on data change - ENHANCED
+  useEffect(() => {
+    const hasErrors = formFieldData.some(field => field.error);
+    const requiredFieldsFilled = formFieldData
+      .filter(field => field.required)
+      .every(field => field.value.trim() !== '');
+    
+    setIsFormValid(!hasErrors && requiredFieldsFilled);
+  }, [formFieldData]);
+
+  // Navigation handler to go back to services
+  const navigateToServices = useCallback(() => {
+    navigate('/services');
+  }, [navigate]);
 
   // Form submission
   const handleContactFormSubmit = useCallback(async (e) => {
@@ -823,6 +822,11 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       to { transform: translateX(0); opacity: 1; }
     }
     
+    @keyframes shimmer {
+      0% { background-position: -1000px 0; }
+      100% { background-position: 1000px 0; }
+    }
+    
     .form-section::before {
       content: '';
       position: absolute;
@@ -869,11 +873,20 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       color: #444;
     }
     
+    .primary-button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    
     .input-field:focus {
       outline: none;
       border-color: #0802A3;
       background: #fff;
       box-shadow: 0 0 0 3px rgba(8,2,163,0.1);
+    }
+    
+    .contact-image-loaded {
+      transform: scale(1);
+      transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .success-message {
@@ -888,6 +901,7 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       gap: 10px;
     }
     
+    /* Loading animation for submit button */
     .submitting::after {
       content: '';
       position: absolute;
@@ -904,10 +918,20 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       background-color: #fff8f8 !important;
     }
     
+    .input-error:focus {
+      box-shadow: 0 0 0 3px rgba(255,68,68,0.1) !important;
+    }
+    
     .button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none !important;
+    }
+    
+    .button:disabled:hover {
+      transform: none !important;
+      box-shadow: 0 2px 8px rgba(8,2,163,0.2) !important;
+      animation: none !important;
     }
     
     @media (max-width: 768px) {
@@ -943,6 +967,36 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
         right: 10px;
         left: 10px;
         max-width: calc(100% - 20px);
+      }
+    }
+    
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      .form-section,
+      .contact-right,
+      .primary-button,
+      .secondary-button,
+      .tertiary-button,
+      .input-field {
+        transition: none;
+        animation: none;
+      }
+      
+      .contact-image-loaded {
+        transition: none;
+      }
+    }
+    
+    /* High contrast mode */
+    @media (prefers-contrast: high) {
+      .input-field:focus {
+        outline: 2px solid #0802A3;
+        border-color: #0802A3;
+      }
+      
+      .form-section,
+      .contact-right {
+        border: 2px solid #0802A3;
       }
     }
   `;

@@ -3,7 +3,8 @@ import successMessIcon from '../Images/successMessIcon.svg';
 import discardMessIcon from '../Images/discardMessIcon.svg';
 
 const ToastMessage = (props) => {
-    const { error, message, success } = props.showMessage;
+    const { showMessage } = props;
+    const { error, message, success } = showMessage || {};
     const [isVisible, setIsVisible] = useState(false);
     const [isExiting, setIsExiting] = useState(false);
 
@@ -250,18 +251,24 @@ const ToastMessage = (props) => {
         handleClose();
     };
 
-    if (!isVisible) return null;
+    // Early return if no message or not visible
+    if (!message || !isVisible) return null;
+
+    // Determine toast type
+    const isSuccess = success && !error;
+    const isError = error;
 
     return (
         <div 
             style={{
                 ...styles.toastMessageSection,
-                ...(success ? styles.successStyle : styles.errorStyle)
+                ...(isSuccess ? styles.successStyle : styles.errorStyle)
             }}
-            className={`toast-message ${success ? 'success' : 'error'}`}
+            className={`toast-message ${isSuccess ? 'success' : 'error'}`}
             onClick={handleToastClick}
             role="alert"
             aria-live="assertive"
+            aria-label={isSuccess ? 'Success message' : 'Error message'}
         >
             <style>{enhancedStyles}</style>
             
@@ -276,8 +283,8 @@ const ToastMessage = (props) => {
                 {/* Icon */}
                 <div style={styles.iconContainer}>
                     <img 
-                        src={success ? successMessIcon : discardMessIcon} 
-                        alt={success ? "Success" : "Error"} 
+                        src={isSuccess ? successMessIcon : discardMessIcon} 
+                        alt={isSuccess ? "Success icon" : "Error icon"} 
                         style={styles.icon}
                     />
                 </div>
@@ -296,6 +303,7 @@ const ToastMessage = (props) => {
                         handleClose();
                     }}
                     aria-label="Close notification"
+                    type="button"
                 >
                     ×
                 </button>
@@ -304,4 +312,4 @@ const ToastMessage = (props) => {
     );
 };
 
-export default ToastMessage;
+export default React.memo(ToastMessage);

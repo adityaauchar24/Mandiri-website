@@ -1,17 +1,31 @@
-import express from 'express';
-import User from '../models/User.js';
-
+const express = require('express');
 const router = express.Router();
+const User = require('../models/User');
 
-// GET all users
+// GET all users with optional filtering
 router.get('/', async (req, res) => {
     try {
-        const users = await User.find().sort({ createdAt: -1 });
+        const { status, page = 1, limit = 10 } = req.query;
+        
+        let query = {};
+        if (status) query.status = status;
+        
+        const users = await User.find(query)
+            .sort({ createdAt: -1 })
+            .limit(limit * 1)
+            .skip((page - 1) * limit);
+            
+        const total = await User.countDocuments(query);
+
         res.json({
             success: true,
             message: 'Users fetched successfully',
             data: users,
-            count: users.length
+            pagination: {
+                current: parseInt(page),
+                pages: Math.ceil(total / limit),
+                total: total
+            }
         });
     } catch (error) {
         console.error('Error fetching users:', error);
@@ -28,21 +42,23 @@ router.post('/', async (req, res) => {
     try {
         const { fullName, email, phoneNumber, companyName, message } = req.body;
 
-        // Validate required fields
-        if (!fullName || !email || !phoneNumber || !companyName || !message) {
+        // Check if email already exists
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
+        if (existingUser) {
             return res.status(400).json({
                 success: false,
-                message: 'All fields are required'
+                message: 'Email already exists. Please use a different email address.'
             });
         }
 
         // Create new user
         const newUser = new User({
             fullName,
-            email,
+            email: email.toLowerCase(),
             phoneNumber,
             companyName,
-            message
+            message,
+            source: 'website'
         });
 
         // Save to database
@@ -51,31 +67,26 @@ router.post('/', async (req, res) => {
         res.status(201).json({
             success: true,
             message: 'Thank you for your message! We will get back to you soon.',
-            data: {
-                id: savedUser._id,
-                fullName: savedUser.fullName,
-                email: savedUser.email,
-                companyName: savedUser.companyName
-            }
+            data: savedUser.getPublicProfile()
         });
     } catch (error) {
         console.error('Error creating user:', error);
-        
-        // Handle duplicate email error
-        if (error.code === 11000) {
-            return res.status(400).json({
-                success: false,
-                message: 'Email already exists. Please use a different email.'
-            });
-        }
         
         // Handle validation errors
         if (error.name === 'ValidationError') {
             const errors = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({
                 success: false,
-                message: 'Validation error',
+                message: 'Validation failed',
                 errors: errors
+            });
+        }
+        
+        // Handle duplicate email error
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email already exists. Please use a different email address.'
             });
         }
         
@@ -100,13 +111,55 @@ router.get('/:id', async (req, res) => {
         res.json({
             success: true,
             message: 'User fetched successfully',
-            data: user
+            data: user.getPublicProfile()
         });
     } catch (error) {
         console.error('Error fetching user:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching user',
+            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
+        });
+    }
+});
+
+// UPDATE user status
+router.patch('/:id/status', async (req, res) => {
+    try {
+        const { status } = req.body;
+        const validStatuses = ['pending', 'read', 'replied', 'archived'];
+        
+        if (!status || !validStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Valid status is required',
+                validStatuses: validStatuses
+            });
+        }
+
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { status: status },
+            { new: true, runValidators: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: `User status updated to ${status}`,
+            data: user.getPublicProfile()
+        });
+    } catch (error) {
+        console.error('Error updating user status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating user status',
             error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
         });
     }
@@ -125,7 +178,7 @@ router.delete('/:id', async (req, res) => {
         res.json({
             success: true,
             message: 'User deleted successfully',
-            data: user
+            data: { id: user._id, email: user.email }
         });
     } catch (error) {
         console.error('Error deleting user:', error);
@@ -137,4 +190,4 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-export default router;
+module.exports = router;

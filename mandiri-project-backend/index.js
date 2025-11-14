@@ -1,16 +1,8 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
-
-// ES6 module fix for __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
 const app = express();
 
@@ -83,8 +75,8 @@ mongoose.connect(MONGODB_URI, {
     console.log('💡 Please check your MongoDB connection and .env file');
 });
 
-// Import routes
-import userRoutes from './routes/users.js';
+// Import routes - FIXED: Use CommonJS require
+const userRoutes = require('./routes/users');
 
 // Use routes
 app.use('/api/users', userRoutes);
@@ -134,7 +126,7 @@ app.get('/api/test', (req, res) => {
 // Test database connection route
 app.get('/api/test-db', async (req, res) => {
     try {
-        const User = (await import('./models/User.js')).default;
+        const User = require('./models/User');
         const userCount = await User.countDocuments();
         res.json({
             success: true,
@@ -191,4 +183,4 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Server ready!`);
 });
 
-export default app;
+module.exports = app;

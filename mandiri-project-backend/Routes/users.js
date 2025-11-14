@@ -1,6 +1,7 @@
-const express = require('express');
+import express from 'express';
+import User from '../models/User.js';
+
 const router = express.Router();
-const User = require('../models/User');
 
 // GET all users
 router.get('/', async (req, res) => {
@@ -13,10 +14,11 @@ router.get('/', async (req, res) => {
             count: users.length
         });
     } catch (error) {
+        console.error('Error fetching users:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching users',
-            error: error.message
+            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
         });
     }
 });
@@ -67,10 +69,20 @@ router.post('/', async (req, res) => {
             });
         }
         
+        // Handle validation errors
+        if (error.name === 'ValidationError') {
+            const errors = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({
+                success: false,
+                message: 'Validation error',
+                errors: errors
+            });
+        }
+        
         res.status(500).json({
             success: false,
             message: 'Failed to send message. Please try again.',
-            error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
         });
     }
 });
@@ -91,10 +103,11 @@ router.get('/:id', async (req, res) => {
             data: user
         });
     } catch (error) {
+        console.error('Error fetching user:', error);
         res.status(500).json({
             success: false,
             message: 'Error fetching user',
-            error: error.message
+            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
         });
     }
 });
@@ -115,12 +128,13 @@ router.delete('/:id', async (req, res) => {
             data: user
         });
     } catch (error) {
+        console.error('Error deleting user:', error);
         res.status(500).json({
             success: false,
             message: 'Error deleting user',
-            error: error.message
+            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
         });
     }
 });
 
-module.exports = router;
+export default router;

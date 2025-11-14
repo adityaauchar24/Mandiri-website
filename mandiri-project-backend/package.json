@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Backend API for PT. International Mandiri Expo",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
@@ -27,6 +28,6 @@
     "nodemon": "^2.0.20"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=18.0.0"
   }
 }

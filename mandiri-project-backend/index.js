@@ -1,14 +1,37 @@
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const path = require('path');
-require('dotenv').config();
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+// ES6 module fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // CORS configuration
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            process.env.FRONTEND_URL,
+            'http://localhost:3000',
+            'https://your-frontend-app.onrender.com'
+        ];
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true
@@ -24,19 +47,36 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Fix mongoose warning
 mongoose.set('strictQuery', false);
 
-// Connect to MongoDB
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/mandiri-db';
+// MongoDB Connection with Atlas
+const getMongoURI = () => {
+    if (process.env.MONGODB_URI) {
+        return process.env.MONGODB_URI;
+    }
+    
+    // Construct URI from individual components
+    const user = encodeURIComponent(process.env.MONGO_USER || '');
+    const pass = encodeURIComponent(process.env.MONGO_PASS || '');
+    const database = process.env.MONGO_DATABASE || 'mandiri-database';
+    
+    return `mongodb+srv://${user}:${pass}@internationalmandiriexp.hnk5nhk.mongodb.net/${database}?retryWrites=true&w=majority`;
+};
+
+const MONGODB_URI = getMongoURI();
 
 console.log('🔗 Connecting to MongoDB...');
-console.log('MongoDB URI:', MONGODB_URI.replace(/mongodb:\/\/([^:]+):([^@]+)@/, 'mongodb://***:***@'));
+console.log('Database:', process.env.MONGO_DATABASE || 'mandiri-database');
 
+// Connect to MongoDB
 mongoose.connect(MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
+    retryWrites: true,
+    w: 'majority'
 })
 .then(() => {
     console.log('✅ Connected to MongoDB successfully!');
     console.log('📊 Database:', mongoose.connection.name);
+    console.log('🏠 Host:', mongoose.connection.host);
 })
 .catch(err => {
     console.log('❌ MongoDB connection error:', err.message);
@@ -44,7 +84,7 @@ mongoose.connect(MONGODB_URI, {
 });
 
 // Import routes
-const userRoutes = require('./routes/users');
+import userRoutes from './routes/users.js';
 
 // Use routes
 app.use('/api/users', userRoutes);
@@ -52,6 +92,7 @@ app.use('/api/users', userRoutes);
 // Basic routes
 app.get('/', (req, res) => {
     res.json({ 
+        success: true,
         message: '🚀 PT. International Mandiri Expo Backend API is running!',
         version: '1.0.0',
         environment: process.env.NODE_ENV || 'development',
@@ -67,6 +108,7 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
     res.json({ 
+        success: true,
         status: 'OK',
         database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
         environment: process.env.NODE_ENV || 'development',
@@ -92,7 +134,7 @@ app.get('/api/test', (req, res) => {
 // Test database connection route
 app.get('/api/test-db', async (req, res) => {
     try {
-        const User = require('./models/User');
+        const User = (await import('./models/User.js')).default;
         const userCount = await User.countDocuments();
         res.json({
             success: true,
@@ -104,7 +146,7 @@ app.get('/api/test-db', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Database connection test failed',
-            error: error.message
+            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
         });
     }
 });
@@ -148,3 +190,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`   💾 DB Test: http://localhost:${PORT}/api/test-db`);
     console.log(`\n🚀 Server ready!`);
 });
+
+export default app;

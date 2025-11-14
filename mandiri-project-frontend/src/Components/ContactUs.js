@@ -109,9 +109,9 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
   const navigate = useNavigate();
 
   // API URL configuration - CORRECTED to match your backend
-  const API_BASE_URL = process.env.NODE_ENV === 'production' 
-    ? 'https://pt-international-mandiri-expo.onrender.com'
-    : 'http://localhost:5001';
+  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api/users';
+
 
   // Enhanced validation patterns with better international support
   const validationPatterns = useMemo(() => VALIDATION_PATTERNS, []);
@@ -281,13 +281,13 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
 
       console.log('📝 Submission data:', submissionData);
 
-      const response = await fetch(`${API_BASE_URL}/api/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submissionData)
-      });
+      const response = await fetch(`${API_BASE_URL}${API_CONTACT_ENDPOINT}`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(submissionData)
+});
 
       // Enhanced error handling - check if response is OK before parsing JSON
       if (!response.ok) {

@@ -1,14 +1,10 @@
-# =============================================
-# DEPENDENCIES - NEVER COMMIT
-# =============================================
+# Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# =============================================
-# ENVIRONMENT FILES - KEEP LOCAL ONLY
-# =============================================
+# Environment variables
 .env
 .env.local
 .env.development
@@ -17,57 +13,26 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
-# =============================================
-# BUILD OUTPUTS
-# =============================================
+# Build outputs
 /build
 /dist
 /out
 
-# =============================================
-# IDE & EDITOR FILES
-# =============================================
+# IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
-# =============================================
-# OPERATING SYSTEM FILES
-# =============================================
+# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# =============================================
-# LOGS & CACHE
-# =============================================
+# Logs
 *.log
 logs/
 .eslintcache
 .cache/
-.parcel-cache/
 
-# =============================================
-# TESTING
-# =============================================
+# Testing
 /coverage
-.nyc_output
-
-# =============================================
-# REACT SPECIFIC
-# =============================================
-/.pnp
-.pnp.js
-.pnp.cjs
-
-# =============================================
-# PACKAGE MANAGER
-# =============================================
-.yarn/
-.pnp.*

@@ -47,7 +47,7 @@ const INITIAL_FORM_DATA = [
     value: '',
     error: false,
     mess: '',
-    required: true, // Changed to true to match backend requirement
+    required: true,
     placeholder: 'Enter your company name',
     maxLength: 100,
     autoComplete: 'organization'
@@ -69,7 +69,7 @@ const INITIAL_FORM_DATA = [
 
 const VALIDATION_PATTERNS = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  phone: /^[\+]?[1-9][\d\s\-\(\)]{8,20}$/,
+  phone: /^[+]?[1-9][\d\s\-()]{8,20}$/,
   name: /^[a-zA-Z\s\-']{2,50}$/
 };
 
@@ -108,10 +108,9 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
   const formRef = useRef(null);
   const navigate = useNavigate();
 
-  // API URL configuration - CORRECTED to match your backend
+  // API URL configuration
   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api/users';
-
+  const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api/users';
 
   // Enhanced validation patterns with better international support
   const validationPatterns = useMemo(() => VALIDATION_PATTERNS, []);
@@ -162,7 +161,7 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       }
       return elm;
     }));
-  }, [touchedFields]);
+  }, [touchedFields, validateField]);
 
   // Field validation helper
   const validateField = useCallback((field) => {
@@ -215,7 +214,7 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
     }
     
     return newField;
-  }, [validationPatterns]);
+  }, [validationPatterns.email, validationPatterns.phone, validationPatterns.name]);
 
   // Handle field blur for validation
   const handleFieldBlur = useCallback((title) => {
@@ -253,7 +252,7 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
     return isValid;
   }, [formFieldData, validateField]);
 
-  // ✅ CORRECTED FORM SUBMISSION - Using the right endpoint
+  // Form submission
   const handleContactFormSubmit = useCallback(async (e) => {
     e.preventDefault();
     
@@ -267,10 +266,9 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
     }
 
     try {
-      // ✅ CORRECTED: Use the same endpoint as HomeContactForm.js
-      console.log('📤 Sending contact form data to:', `${API_BASE_URL}/api/users`);
+      console.log('📤 Sending contact form data to:', `${API_BASE_URL}${API_CONTACT_ENDPOINT}`);
       
-      // Transform form data to match backend expectations - CORRECTED field names
+      // Transform form data to match backend expectations
       const submissionData = {
         fullName: formFieldData.find(field => field.title === 'Full Name')?.value.trim() || '',
         email: formFieldData.find(field => field.title === 'Email')?.value.trim().toLowerCase() || '',
@@ -282,14 +280,14 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       console.log('📝 Submission data:', submissionData);
 
       const response = await fetch(`${API_BASE_URL}${API_CONTACT_ENDPOINT}`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify(submissionData)
-});
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submissionData)
+      });
 
-      // Enhanced error handling - check if response is OK before parsing JSON
+      // Enhanced error handling
       if (!response.ok) {
         let errorMessage = `Server error: ${response.status}`;
         try {
@@ -327,9 +325,9 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       let userFriendlyMessage = error.message;
       
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        userFriendlyMessage = 'Cannot connect to server. Please make sure the backend is running on localhost:5001';
+        userFriendlyMessage = 'Cannot connect to server. Please make sure the backend is running.';
       } else if (error.message.includes('Failed to fetch')) {
-        userFriendlyMessage = 'Network error: Please check if the backend server is running on http://localhost:5001';
+        userFriendlyMessage = 'Network error: Please check if the backend server is running.';
       } else if (error.message.includes('Network error')) {
         userFriendlyMessage = 'Network connection issue. Please check your internet connection.';
       } else if (error.message.includes('Email already exists')) {
@@ -344,7 +342,7 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
     } finally {
       setIsSubmitting(false);
     }
-  }, [formFieldData, handleFormValidation, safeSetShowMessage, API_BASE_URL]);
+  }, [formFieldData, handleFormValidation, safeSetShowMessage, API_BASE_URL, API_CONTACT_ENDPOINT]);
 
   // Reset form function
   const handleResetForm = useCallback(() => {
@@ -553,7 +551,7 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       alignItems: 'center'
     },
 
-    // UPDATED BUTTON STYLES - Smaller, Professional, Attractive
+    // Button styles
     primaryButton: {
       padding: '14px 32px',
       background: 'linear-gradient(135deg, #0802A3 0%, #4A00E0 100%)',
@@ -768,7 +766,7 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
     }
   }), [imageLoaded]);
 
-  // Enhanced SVG icons with better accessibility
+  // SVG icons
   const LocationIcon = () => (
     <svg width="32" height="32" viewBox="0 0 24 24" fill="#0802A3" style={{ minWidth: '32px', flexShrink: 0 }}>
       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
@@ -824,17 +822,6 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       to { transform: translateX(0); opacity: 1; }
     }
     
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.02); }
-      100% { transform: scale(1); }
-    }
-    
-    @keyframes shimmer {
-      0% { background-position: -1000px 0; }
-      100% { background-position: 1000px 0; }
-    }
-    
     .form-section::before {
       content: '';
       position: absolute;
@@ -881,20 +868,11 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       color: #444;
     }
     
-    .primary-button:active:not(:disabled) {
-      transform: translateY(0);
-    }
-    
     .input-field:focus {
       outline: none;
       border-color: #0802A3;
       background: #fff;
       box-shadow: 0 0 0 3px rgba(8,2,163,0.1);
-    }
-    
-    .contact-image-loaded {
-      transform: scale(1);
-      transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     .success-message {
@@ -909,7 +887,6 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       gap: 10px;
     }
     
-    /* Loading animation for submit button */
     .submitting::after {
       content: '';
       position: absolute;
@@ -926,20 +903,10 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
       background-color: #fff8f8 !important;
     }
     
-    .input-error:focus {
-      box-shadow: 0 0 0 3px rgba(255,68,68,0.1) !important;
-    }
-    
     .button:disabled {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none !important;
-    }
-    
-    .button:disabled:hover {
-      transform: none !important;
-      box-shadow: 0 2px 8px rgba(8,2,163,0.2) !important;
-      animation: none !important;
     }
     
     @media (max-width: 768px) {
@@ -975,36 +942,6 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
         right: 10px;
         left: 10px;
         max-width: calc(100% - 20px);
-      }
-    }
-    
-    /* Reduced motion support */
-    @media (prefers-reduced-motion: reduce) {
-      .form-section,
-      .contact-right,
-      .primary-button,
-      .secondary-button,
-      .tertiary-button,
-      .input-field {
-        transition: none;
-        animation: none;
-      }
-      
-      .contact-image-loaded {
-        transition: none;
-      }
-    }
-    
-    /* High contrast mode */
-    @media (prefers-contrast: high) {
-      .input-field:focus {
-        outline: 2px solid #0802A3;
-        border-color: #0802A3;
-      }
-      
-      .form-section,
-      .contact-right {
-        border: 2px solid #0802A3;
       }
     }
   `;
@@ -1128,7 +1065,7 @@ const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api
             </div>
           ))}
 
-          {/* UPDATED BUTTON SECTION - Professional, Smaller, Attractive */}
+          {/* Buttons Section */}
           <div style={styles.submitBtn}>
             <div style={styles.buttonContainer}>
               <button 

@@ -1,19 +1,19 @@
 {
   "name": "pt-international-mandiri-expo-backend",
   "version": "1.0.0",
-  "description": "Backend API for PT. International Mandiri Expo",
+  "description": "Backend API for PT. International Mandiri Expo - Local Development Only",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js",
-    "test": "echo \"No tests specified\" && exit 0",
-    "build": "echo \"No build process needed\""
+    "dev": "nodemon index.js"
   },
   "keywords": [
     "express",
     "mongodb",
     "api",
-    "backend"
+    "backend",
+    "local-development"
   ],
   "author": "PT. International Mandiri Expo",
   "license": "ISC",
@@ -25,8 +25,5 @@
   },
   "devDependencies": {
     "nodemon": "^2.0.20"
-  },
-  "engines": {
-    "node": ">=14.0.0"
   }
 }

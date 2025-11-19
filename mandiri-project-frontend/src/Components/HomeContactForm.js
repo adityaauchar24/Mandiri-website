@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import worldDeliveryImg from '../Images/worldDeliveryImg.jpg';
 
 const HomeContactForm = ({ setShowMessage, showMessage }) => {
@@ -11,11 +11,195 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
     });
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [backendStatus, setBackendStatus] = useState('checking');
+    const [characterCount, setCharacterCount] = useState(0);
 
-    // API URL configuration
-    const API_BASE_URL = process.env.NODE_ENV === 'production' 
-        ? 'https://pt-international-mandiri-expo.onrender.com'
-        : 'http://localhost:5001';
+    // Local development configuration
+    const API_BASE_URL = 'http://localhost:5001';
+    const API_CONTACT_ENDPOINT = '/api/users';
+
+    // Check backend connection on component mount
+    useEffect(() => {
+        checkBackendConnection();
+    }, []);
+
+    const checkBackendConnection = async () => {
+        try {
+            setBackendStatus('checking');
+            console.log('🔍 Checking backend connection to:', `${API_BASE_URL}/health`);
+            
+            const response = await fetch(`${API_BASE_URL}/health`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.database === 'Connected') {
+                    setBackendStatus('connected');
+                    console.log('✅ Backend is connected and running');
+                } else {
+                    setBackendStatus('error');
+                }
+            } else {
+                setBackendStatus('error');
+            }
+        } catch (error) {
+            setBackendStatus('error');
+            console.log('❌ Backend connection error:', error.message);
+        }
+    };
+
+    const handleInputChange = (field, value) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+        
+        if (field === 'message') {
+            setCharacterCount(value.length);
+        }
+        
+        if (errors[field]) {
+            setErrors(prev => ({
+                ...prev,
+                [field]: ''
+            }));
+        }
+        if (showMessage) {
+            setShowMessage(null);
+        }
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+        
+        if (!formData.fullName.trim()) {
+            newErrors.fullName = 'Full name is required';
+        } else if (formData.fullName.trim().length < 2) {
+            newErrors.fullName = 'Full name must be at least 2 characters';
+        }
+        
+        if (!formData.email.trim()) {
+            newErrors.email = 'Email is required';
+        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+            newErrors.email = 'Please enter a valid email address';
+        }
+        
+        if (!formData.phoneNumber.trim()) {
+            newErrors.phoneNumber = 'Phone number is required';
+        } else if (!/^[\+]?[0-9\s\-\(\)]{8,20}$/.test(formData.phoneNumber.replace(/\s/g, ''))) {
+            newErrors.phoneNumber = 'Please enter a valid phone number (8-20 digits)';
+        }
+        
+        if (!formData.companyName.trim()) {
+            newErrors.companyName = 'Company name is required';
+        }
+        
+        if (!formData.message.trim()) {
+            newErrors.message = 'Message is required';
+        } else if (formData.message.trim().length < 10) {
+            newErrors.message = 'Message must be at least 10 characters';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (backendStatus !== 'connected') {
+            setShowMessage({ 
+                success: false, 
+                error: true, 
+                message: 'Backend server is not connected. Please make sure the backend is running on localhost:5001' 
+            });
+            return;
+        }
+
+        setShowMessage(null);
+        setIsSubmitting(true);
+
+        if (!validateForm()) {
+            setIsSubmitting(false);
+            return;
+        }
+
+        try {
+            console.log('📤 Sending contact form data to:', `${API_BASE_URL}${API_CONTACT_ENDPOINT}`);
+            
+            const submissionData = {
+                fullName: formData.fullName.trim(),
+                email: formData.email.trim().toLowerCase(),
+                phoneNumber: formData.phoneNumber.trim(),
+                companyName: formData.companyName.trim(),
+                message: formData.message.trim()
+            };
+
+            console.log('📝 Submission data:', submissionData);
+
+            const response = await fetch(`${API_BASE_URL}${API_CONTACT_ENDPOINT}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(submissionData)
+            });
+
+            const result = await response.json();
+            console.log('✅ Backend response:', result);
+
+            if (result.success) {
+                setShowMessage({ 
+                    success: true, 
+                    error: false, 
+                    message: result.message || 'Thank you! Your message has been sent successfully.' 
+                });
+                
+                // Reset form
+                setFormData({
+                    fullName: '',
+                    email: '',
+                    phoneNumber: '',
+                    companyName: '',
+                    message: ''
+                });
+                
+                setCharacterCount(0);
+                setErrors({});
+                
+            } else {
+                throw new Error(result.message || 'Failed to send message');
+            }
+        } catch (error) {
+            console.error('❌ Error submitting form:', error);
+            
+            let userFriendlyMessage = error.message;
+            
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                userFriendlyMessage = 'Cannot connect to server. Please make sure the backend is running on localhost:5001';
+            } else if (error.message.includes('Failed to fetch')) {
+                userFriendlyMessage = 'Network error: Please check if the backend server is running on http://localhost:5001';
+            } else if (error.message.includes('Email already exists')) {
+                userFriendlyMessage = 'This email is already registered. Please use a different email address.';
+            }
+            
+            setShowMessage({ 
+                success: false, 
+                error: true, 
+                message: userFriendlyMessage 
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleRetryConnection = () => {
+        checkBackendConnection();
+    };
 
     const styles = {
         container: {
@@ -63,7 +247,6 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
             width: '100%',
             maxWidth: '400px',
             margin: '0 auto',
-            transition: 'transform 0.3s ease',
             display: 'flex',
             flexDirection: 'column'
         },
@@ -143,6 +326,11 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
             opacity: 0.7,
             cursor: 'not-allowed'
         },
+        disabledBtn: {
+            backgroundColor: '#718096',
+            cursor: 'not-allowed',
+            opacity: 0.6
+        },
         successMessage: {
             backgroundColor: '#f0fff4',
             border: '1px solid #9ae6b4',
@@ -165,154 +353,55 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
             width: '100%',
             boxSizing: 'border-box'
         },
+        backendStatus: {
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            textAlign: 'center',
+            width: '100%',
+            boxSizing: 'border-box',
+            fontSize: '14px',
+            fontWeight: '600'
+        },
+        checkingStatus: {
+            backgroundColor: '#fefcbf',
+            border: '1px solid #f6e05e',
+            color: '#744210'
+        },
+        connectedStatus: {
+            backgroundColor: '#c6f6d5',
+            border: '1px solid #68d391',
+            color: '#22543d'
+        },
+        errorStatus: {
+            backgroundColor: '#fed7d7',
+            border: '1px solid #feb2b2',
+            color: '#c53030'
+        },
         requiredText: {
             marginTop: '1rem',
             textAlign: 'center',
             color: '#718096',
             fontSize: '12px',
             width: '100%'
-        }
-    };
-
-    const handleInputChange = (field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-        // Clear error when user starts typing
-        if (errors[field]) {
-            setErrors(prev => ({
-                ...prev,
-                [field]: ''
-            }));
-        }
-        // Clear any message when user starts typing
-        if (showMessage) {
-            setShowMessage(null);
-        }
-    };
-
-    const validateForm = () => {
-        const newErrors = {};
-        
-        if (!formData.fullName.trim()) {
-            newErrors.fullName = 'Full name is required';
-        } else if (formData.fullName.trim().length < 2) {
-            newErrors.fullName = 'Full name must be at least 2 characters';
-        }
-        
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email is required';
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Email is invalid';
-        }
-        
-        if (!formData.phoneNumber.trim()) {
-            newErrors.phoneNumber = 'Phone number is required';
-        } else if (!/^[+]?[0-9\s\-()]{10,}$/.test(formData.phoneNumber.replace(/\s/g, ''))) {
-            newErrors.phoneNumber = 'Please enter a valid phone number';
-        }
-        
-        if (!formData.companyName.trim()) {
-            newErrors.companyName = 'Company name is required';
-        }
-        
-        if (!formData.message.trim()) {
-            newErrors.message = 'Message is required';
-        } else if (formData.message.trim().length < 10) {
-            newErrors.message = 'Message must be at least 10 characters';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        // Clear any previous messages when starting new submission
-        setShowMessage(null);
-        setIsSubmitting(true);
-
-        if (!validateForm()) {
-            setIsSubmitting(false);
-            return;
-        }
-
-        try {
-            console.log('📤 Sending contact form data to:', `${API_BASE_URL}/api/users`);
-            
-            const response = await fetch(`${API_BASE_URL}/api/users`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    fullName: formData.fullName.trim(),
-                    email: formData.email.trim().toLowerCase(),
-                    phoneNumber: formData.phoneNumber.trim(),
-                    companyName: formData.companyName.trim(),
-                    message: formData.message.trim()
-                })
-            });
-
-            // Check if response is OK before parsing JSON
-            if (!response.ok) {
-                let errorMessage = `Server error: ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorMessage;
-                } catch (parseError) {
-                    errorMessage = response.statusText || errorMessage;
-                }
-                throw new Error(errorMessage);
-            }
-
-            const result = await response.json();
-
-            if (result.success) {
-                setShowMessage({ 
-                    success: true, 
-                    error: false, 
-                    message: result.message || 'Thank you! Your message has been sent successfully.' 
-                });
-                
-                // Reset form
-                setFormData({
-                    fullName: '',
-                    email: '',
-                    phoneNumber: '',
-                    companyName: '',
-                    message: ''
-                });
-                
-                // Clear any existing errors
-                setErrors({});
-                
-            } else {
-                throw new Error(result.message || 'Failed to send message');
-            }
-        } catch (error) {
-            console.error('❌ Error submitting form:', error);
-            
-            // Provide user-friendly error messages
-            let userFriendlyMessage = error.message;
-            
-            if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                userFriendlyMessage = 'Cannot connect to server. Please make sure the backend is running on localhost:5001';
-            } else if (error.message.includes('Failed to fetch')) {
-                userFriendlyMessage = 'Network error: Please check if the backend server is running on http://localhost:5001';
-            } else if (error.message.includes('Network error')) {
-                userFriendlyMessage = 'Network connection issue. Please check your internet connection.';
-            }
-            
-            setShowMessage({ 
-                success: false, 
-                error: true, 
-                message: userFriendlyMessage 
-            });
-        } finally {
-            setIsSubmitting(false);
+        },
+        retryButton: {
+            padding: '8px 16px',
+            backgroundColor: '#0802A3',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '12px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            marginLeft: '10px',
+            transition: 'all 0.3s ease'
+        },
+        characterCount: {
+            fontSize: '12px',
+            color: '#718096',
+            textAlign: 'right',
+            marginTop: '4px'
         }
     };
 
@@ -348,8 +437,41 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                 ...styles.submittingBtn
             };
         }
+        if (backendStatus !== 'connected') {
+            return {
+                ...baseStyle,
+                ...styles.disabledBtn
+            };
+        }
         return baseStyle;
     };
+
+    const getStatusMessage = () => {
+        switch (backendStatus) {
+            case 'checking':
+                return {
+                    message: '🔄 Checking backend connection...',
+                    style: { ...styles.backendStatus, ...styles.checkingStatus }
+                };
+            case 'connected':
+                return {
+                    message: '✅ Backend connected - Data will be saved permanently to MongoDB',
+                    style: { ...styles.backendStatus, ...styles.connectedStatus }
+                };
+            case 'error':
+                return {
+                    message: '❌ Backend not connected',
+                    style: { ...styles.backendStatus, ...styles.errorStatus }
+                };
+            default:
+                return {
+                    message: '🔍 Checking connection...',
+                    style: { ...styles.backendStatus, ...styles.checkingStatus }
+                };
+        }
+    };
+
+    const statusInfo = getStatusMessage();
 
     return (
         <div style={styles.container}>
@@ -360,16 +482,11 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                     <form 
                         style={styles.form} 
                         onSubmit={handleSubmit}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-5px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                        }}
+                        noValidate
                     >
                         <h2 style={styles.heading}>Get In Touch</h2>
                         
-                        {/* Display success/error messages */}
+                        
                         {showMessage && (
                             <div style={showMessage.success ? styles.successMessage : styles.errorMessage}>
                                 {showMessage.message}
@@ -378,30 +495,17 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                         
                         {['fullName', 'email', 'phoneNumber', 'companyName'].map(field => (
                             <div key={field} style={styles.inputGroup}>
-                                <label style={styles.label}>
+                                <label style={styles.label} htmlFor={field}>
                                     {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                                     <span style={{color: '#e53e3e'}}>*</span>
                                 </label>
                                 <input
+                                    id={field}
                                     type={field === 'email' ? 'email' : field === 'phoneNumber' ? 'tel' : 'text'}
                                     style={getInputStyle(field)}
                                     value={formData[field]}
                                     onChange={(e) => handleInputChange(field, e.target.value)}
-                                    onFocus={(e) => {
-                                        if (!errors[field]) {
-                                            e.target.style.border = '2px solid #0802A3';
-                                            e.target.style.boxShadow = '0 0 0 3px rgba(8, 2, 163, 0.1)';
-                                            e.target.style.backgroundColor = '#fff';
-                                        }
-                                    }}
-                                    onBlur={(e) => {
-                                        if (!errors[field]) {
-                                            e.target.style.border = '2px solid #e2e8f0';
-                                            e.target.style.boxShadow = 'none';
-                                            e.target.style.backgroundColor = '#fff';
-                                        }
-                                    }}
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || backendStatus !== 'connected'}
                                     placeholder={`Enter your ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`}
                                 />
                                 {errors[field] && <span style={styles.error}>{errors[field]}</span>}
@@ -409,57 +513,39 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                         ))}
                         
                         <div style={styles.inputGroup}>
-                            <label style={styles.label}>
+                            <label style={styles.label} htmlFor="message">
                                 Message
                                 <span style={{color: '#e53e3e'}}>*</span>
                             </label>
                             <textarea
+                                id="message"
                                 style={getTextareaStyle()}
                                 value={formData.message}
                                 onChange={(e) => handleInputChange('message', e.target.value)}
-                                onFocus={(e) => {
-                                    if (!errors.message) {
-                                        e.target.style.border = '2px solid #0802A3';
-                                        e.target.style.boxShadow = '0 0 0 3px rgba(8, 2, 163, 0.1)';
-                                        e.target.style.backgroundColor = '#fff';
-                                    }
-                                }}
-                                onBlur={(e) => {
-                                    if (!errors.message) {
-                                        e.target.style.border = '2px solid #e2e8f0';
-                                        e.target.style.boxShadow = 'none';
-                                        e.target.style.backgroundColor = '#fff';
-                                    }
-                                }}
-                                disabled={isSubmitting}
-                                placeholder="Enter your message here..."
+                                disabled={isSubmitting || backendStatus !== 'connected'}
+                                placeholder="Enter your message here (minimum 10 characters)..."
+                                maxLength={1000}
                             />
+                            <div style={styles.characterCount}>
+                                {characterCount}/1000 characters
+                            </div>
                             {errors.message && <span style={styles.error}>{errors.message}</span>}
                         </div>
                         
                         <button 
                             type="submit" 
                             style={getButtonStyle()}
-                            disabled={isSubmitting}
-                            onMouseEnter={(e) => {
-                                if (!isSubmitting) {
-                                    e.target.style.backgroundColor = '#4A00E0';
-                                    e.target.style.transform = 'translateY(-2px)';
-                                    e.target.style.boxShadow = '0 10px 20px rgba(8, 2, 163, 0.3)';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!isSubmitting) {
-                                    e.target.style.backgroundColor = '#0802A3';
-                                    e.target.style.transform = 'translateY(0)';
-                                    e.target.style.boxShadow = 'none';
-                                }
-                            }}
+                            disabled={isSubmitting || backendStatus !== 'connected'}
                         >
                             {isSubmitting ? (
                                 <>
                                     <span style={{marginRight: '8px'}}>⏳</span>
                                     Sending...
+                                </>
+                            ) : backendStatus !== 'connected' ? (
+                                <>
+                                    <span style={{marginRight: '8px'}}>🔌</span>
+                                    Backend Offline
                                 </>
                             ) : (
                                 <>
@@ -470,7 +556,7 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                         </button>
                         
                         <div style={styles.requiredText}>
-                            * Required fields
+                            * Required fields | {backendStatus === 'connected' ? 'Data will be saved permanently to MongoDB database' : 'Backend connection required to save data'}
                         </div>
                     </form>
                 </div>

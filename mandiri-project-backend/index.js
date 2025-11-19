@@ -1,35 +1,19 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const path = require('path');
+const net = require('net');
 require('dotenv').config();
 
 const app = express();
 
-// CORS configuration
+// CORS configuration for local development
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        const allowedOrigins = [
-            process.env.FRONTEND_URL,
-            'http://localhost:3000',
-            'https://your-frontend-app.onrender.com'
-        ];
-        
-        if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true
 }));
 
-// Handle preflight requests
 app.options('*', cors());
 
 // Middleware
@@ -39,24 +23,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Fix mongoose warning
 mongoose.set('strictQuery', false);
 
-// MongoDB Connection with Atlas
-const getMongoURI = () => {
-    if (process.env.MONGODB_URI) {
-        return process.env.MONGODB_URI;
-    }
-    
-    // Construct URI from individual components
-    const user = encodeURIComponent(process.env.MONGO_USER || '');
-    const pass = encodeURIComponent(process.env.MONGO_PASS || '');
-    const database = process.env.MONGO_DATABASE || 'mandiri-database';
-    
-    return `mongodb+srv://${user}:${pass}@internationalmandiriexp.hnk5nhk.mongodb.net/${database}?retryWrites=true&w=majority`;
-};
-
-const MONGODB_URI = getMongoURI();
+// MongoDB Connection - Local Development Only
+const MONGODB_URI = 'mongodb+srv://aucharsujata_db_user:p35dkta56d3UlxNk@cluster0.ffacq4b.mongodb.net/mandiri-database?retryWrites=true&w=majority';
 
 console.log('🔗 Connecting to MongoDB...');
-console.log('Database:', process.env.MONGO_DATABASE || 'mandiri-database');
+console.log('Database: mandiri-database');
 
 // Connect to MongoDB
 mongoose.connect(MONGODB_URI, {
@@ -72,11 +43,10 @@ mongoose.connect(MONGODB_URI, {
 })
 .catch(err => {
     console.log('❌ MongoDB connection error:', err.message);
-    console.log('💡 Please check your MongoDB connection and .env file');
 });
 
-// Import routes - FIXED: Use CommonJS require
-const userRoutes = require('./routes/users');
+// Import routes
+const userRoutes = require('./Routes/users');
 
 // Use routes
 app.use('/api/users', userRoutes);
@@ -87,7 +57,7 @@ app.get('/', (req, res) => {
         success: true,
         message: '🚀 PT. International Mandiri Expo Backend API is running!',
         version: '1.0.0',
-        environment: process.env.NODE_ENV || 'development',
+        environment: 'development',
         timestamp: new Date().toISOString(),
         endpoints: {
             users: '/api/users',
@@ -103,7 +73,7 @@ app.get('/health', (req, res) => {
         success: true,
         status: 'OK',
         database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
-        environment: process.env.NODE_ENV || 'development',
+        environment: 'development',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
     });
@@ -138,7 +108,7 @@ app.get('/api/test-db', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Database connection test failed',
-            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
+            error: error.message
         });
     }
 });
@@ -149,7 +119,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ 
         success: false,
         error: 'Something went wrong!',
-        message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+        message: err.message
     });
 });
 
@@ -169,18 +139,71 @@ app.use('*', (req, res) => {
     });
 });
 
-const PORT = process.env.PORT || 5001;
+// Function to check if port is available
+const isPortAvailable = (port) => {
+    return new Promise((resolve) => {
+        const server = net.createServer();
+        
+        server.listen(port, () => {
+            server.close(() => {
+                resolve(true);
+            });
+        });
+        
+        server.on('error', () => {
+            resolve(false);
+        });
+    });
+};
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n🎯 Server running on port ${PORT}`);
-    console.log(`🏠 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-    console.log(`\n📊 API Endpoints:`);
-    console.log(`   🔍 Health Check: http://localhost:${PORT}/health`);
-    console.log(`   👥 Users API: http://localhost:${PORT}/api/users`);
-    console.log(`   🧪 Test API: http://localhost:${PORT}/api/test`);
-    console.log(`   💾 DB Test: http://localhost:${PORT}/api/test-db`);
-    console.log(`\n🚀 Server ready!`);
-});
+// Find available port
+const findAvailablePort = async (startPort) => {
+    let port = startPort;
+    const maxPort = startPort + 10;
+    
+    while (port <= maxPort) {
+        const available = await isPortAvailable(port);
+        if (available) {
+            return port;
+        }
+        port++;
+    }
+    
+    throw new Error(`No available ports found between ${startPort} and ${maxPort}`);
+};
+
+// Start server
+const startServer = async () => {
+    const defaultPort = 5001;
+    
+    try {
+        const availablePort = await findAvailablePort(defaultPort);
+        
+        app.listen(availablePort, '0.0.0.0', () => {
+            console.log(`\n🎯 Server running on port ${availablePort}`);
+            console.log(`🏠 Environment: development`);
+            console.log(`🌐 CORS enabled for: http://localhost:3000, http://localhost:3001`);
+            console.log(`\n📊 API Endpoints:`);
+            console.log(`   🔍 Health Check: http://localhost:${availablePort}/health`);
+            console.log(`   👥 Users API: http://localhost:${availablePort}/api/users`);
+            console.log(`   🧪 Test API: http://localhost:${availablePort}/api/test`);
+            console.log(`   💾 DB Test: http://localhost:${availablePort}/api/test-db`);
+            console.log(`\n🚀 Server ready!`);
+            
+            if (availablePort !== defaultPort) {
+                console.log(`\n⚠️  Note: Port ${defaultPort} was busy, using port ${availablePort} instead`);
+                console.log(`   Update your frontend .env file:`);
+                console.log(`   REACT_APP_API_BASE_URL=http://localhost:${availablePort}`);
+            }
+        });
+    } catch (error) {
+        console.error('❌ Failed to start server:', error.message);
+        console.log('\n💡 Solution: Kill processes using ports 5001-5010 or use:');
+        console.log('   netstat -ano | findstr :5001');
+        console.log('   taskkill /PID <PID> /F');
+    }
+};
+
+startServer();
 
 module.exports = app;

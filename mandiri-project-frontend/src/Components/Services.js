@@ -55,7 +55,7 @@ const Services = () => {
     navigate('/contact');
   }, [navigate]);
 
-  // Memoized styles for better performance
+  // Memoized styles for better performance - FIXED CSS WARNING
   const styles = useMemo(() => ({
     // Main Container
     serviceContainer: {
@@ -224,11 +224,7 @@ const Services = () => {
       fontFamily: 'inherit',
       boxShadow: '0 8px 25px rgba(0, 0, 0, 0.2)',
       position: 'relative',
-      zIndex: 2,
-      '&:focus-visible': {
-        outline: '3px solid #ffffff',
-        outlineOffset: '2px'
-      }
+      zIndex: 2
     },
 
     buttonIcon: {
@@ -247,7 +243,7 @@ const Services = () => {
     }
   }), [isVisible]);
 
-  // Enhanced CSS animations with modern features
+  // Enhanced CSS animations with modern features - FIXED CSS WARNING
   const enhancedStyles = `
     @keyframes fadeInUp {
       from {
@@ -305,7 +301,7 @@ const Services = () => {
     .stat-item:hover {
       transform: translateY(-5px) scale(1.05);
       background: rgba(255, 255, 255, 0.95);
-      border-radius: '15px';
+      border-radius: 15px;
       box-shadow: 0 20px 40px rgba(8, 2, 163, 0.15);
     }
     

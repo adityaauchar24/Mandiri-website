@@ -9,19 +9,13 @@ import Footer from './Components/Footer';
 import ToastMessage from './Components/ToastMessage';
 import { useEffect, useState } from 'react';
 import Products from './Components/Products';
-import websiteDown from './Images/websiteDown.jpg';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
-  // Fixed: Initialize showMessage as null instead of object
   const [showMessage, setShowMessage] = useState(null);
-
   const [isLoading, setIsLoading] = useState(true);
-  const [isMaintenance, setIsMaintenance] = useState(false);
 
-  // Enhanced useEffect for better performance
   useEffect(() => {
-    // Simulate initial loading
     const loadingTimer = setTimeout(() => {
       setIsLoading(false);
     }, 1000);
@@ -29,14 +23,12 @@ function App() {
     return () => clearTimeout(loadingTimer);
   }, []);
 
-  // Enhanced toast message cleanup - Fixed null checks
   useEffect(() => {
     let clearToastMess;
     
-    // Fixed: Check if showMessage exists and has success or error
     if (showMessage && (showMessage.success || showMessage.error)) {
       clearToastMess = setTimeout(() => {
-        setShowMessage(null); // Set to null instead of object
+        setShowMessage(null);
       }, 5000);
     }
 
@@ -47,9 +39,7 @@ function App() {
     };
   }, [showMessage]);
 
-  // Enhanced global styles
   const globalStyles = `
-    /* Global Reset and Base Styles */
     * {
       margin: 0;
       padding: 0;
@@ -69,7 +59,6 @@ function App() {
       background-color: #ffffff;
     }
 
-    /* App Container */
     .App {
       min-height: 100vh;
       display: flex;
@@ -77,14 +66,12 @@ function App() {
       position: relative;
     }
 
-    /* Main Content Area */
     .main-content {
       flex: 1;
       width: 100%;
       position: relative;
     }
 
-    /* Loading Animation */
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -100,7 +87,6 @@ function App() {
       animation: fadeIn 0.6s ease-out;
     }
 
-    /* Scrollbar Styling */
     ::-webkit-scrollbar {
       width: 8px;
     }
@@ -119,19 +105,16 @@ function App() {
       background: linear-gradient(135deg, #4A00E0 0%, #0802A3 100%);
     }
 
-    /* Selection Styling */
     ::selection {
       background: rgba(8, 2, 163, 0.2);
       color: #0802A3;
     }
 
-    /* Focus Styles for Accessibility */
     *:focus {
       outline: 2px solid #0802A3;
       outline-offset: 2px;
     }
 
-    /* Reduced Motion for Accessibility */
     @media (prefers-reduced-motion: reduce) {
       html {
         scroll-behavior: auto;
@@ -144,28 +127,6 @@ function App() {
       }
     }
 
-    /* Print Styles */
-    @media print {
-      .App {
-        background: white !important;
-        color: black !important;
-      }
-      
-      .ToastMessageSection,
-      .mobile-menu-button {
-        display: none !important;
-      }
-    }
-
-    /* High Contrast Mode Support */
-    @media (prefers-contrast: high) {
-      .App {
-        background: white;
-        color: black;
-      }
-    }
-
-    /* Mobile Optimizations */
     @media (max-width: 768px) {
       html {
         font-size: 14px;
@@ -178,62 +139,13 @@ function App() {
       }
     }
 
-    /* Large Screen Optimizations */
     @media (min-width: 1440px) {
       html {
         font-size: 18px;
       }
     }
-
-    /* Performance Optimizations */
-    .lazy-load {
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    .lazy-load.loaded {
-      opacity: 1;
-    }
   `;
 
-  // Enhanced maintenance page styles
-  const maintenanceStyles = {
-    maintenanceContainer: {
-      width: '100%',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      background: 'linear-gradient(135deg, #0802A3 0%, #4A00E0 100%)',
-      color: 'white',
-      textAlign: 'center',
-      padding: '2rem',
-      fontFamily: "'Inter', sans-serif"
-    },
-    maintenanceImage: {
-      maxWidth: 'min(500px, 90vw)',
-      height: 'auto',
-      borderRadius: '20px',
-      marginBottom: '2rem',
-      boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)'
-    },
-    maintenanceTitle: {
-      fontSize: 'clamp(2rem, 5vw, 3rem)',
-      fontWeight: '800',
-      marginBottom: '1rem',
-      textTransform: 'uppercase'
-    },
-    maintenanceText: {
-      fontSize: 'clamp(1rem, 2vw, 1.2rem)',
-      opacity: '0.9',
-      maxWidth: '600px',
-      lineHeight: '1.6',
-      marginBottom: '2rem'
-    }
-  };
-
-  // Loading component
   const LoadingSpinner = () => (
     <div style={{
       position: 'fixed',
@@ -273,85 +185,17 @@ function App() {
     </div>
   );
 
-  // Render maintenance page if needed
-  if (isMaintenance) {
-    return (
-      <div style={maintenanceStyles.maintenanceContainer}>
-        <img 
-          src={websiteDown} 
-          alt="Website Maintenance" 
-          style={maintenanceStyles.maintenanceImage}
-        />
-        <h1 style={maintenanceStyles.maintenanceTitle}>
-          Website Under Maintenance
-        </h1>
-        <p style={maintenanceStyles.maintenanceText}>
-          We're currently performing some updates to improve your experience. 
-          Please check back shortly. Thank you for your patience!
-        </p>
-        <button 
-          onClick={() => setIsMaintenance(false)}
-          style={{
-            padding: '1rem 2rem',
-            backgroundColor: 'white',
-            color: '#0802A3',
-            border: 'none',
-            borderRadius: '25px',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.3s ease'
-          }}
-          onMouseOver={(e) => {
-            e.target.style.transform = 'translateY(-2px)';
-            e.target.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.2)';
-          }}
-          onMouseOut={(e) => {
-            e.target.style.transform = 'translateY(0)';
-            e.target.style.boxShadow = 'none';
-          }}
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="App">
-      {/* Global Styles */}
       <style>{globalStyles}</style>
       
-      {/* Loading Spinner */}
       {isLoading && <LoadingSpinner />}
 
-      {/* Maintenance Mode - Uncomment to enable */}
-      {/* 
-      <div style={{ position: 'fixed', top: '10px', right: '10px', zIndex: 10000 }}>
-        <button 
-          onClick={() => setIsMaintenance(!isMaintenance)}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: '#0802A3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer',
-            fontSize: '0.8rem'
-          }}
-        >
-          {isMaintenance ? 'Disable Maintenance' : 'Enable Maintenance'}
-        </button>
-      </div>
-      */}
-
       <Router>
-        {/* Toast Messages - Fixed: Check if showMessage exists */}
         {showMessage && (
           <ToastMessage showMessage={showMessage} />
         )}
         
-        {/* Header with enhanced spacing */}
         <div style={{ 
           width: "100%", 
           position: "relative",
@@ -360,7 +204,6 @@ function App() {
           <Header />
         </div>
         
-        {/* Main Content Area */}
         <main className={`main-content ${!isLoading ? 'content-loaded' : ''}`}>
           <Routes>
             <Route 
@@ -393,7 +236,6 @@ function App() {
                 />
               } 
             />
-            {/* Catch all route - redirect to home */}
             <Route 
               path="*" 
               element={<Navigate to="/" replace />} 
@@ -401,50 +243,8 @@ function App() {
           </Routes>
         </main>
         
-        {/* Footer */}
         <Footer />
       </Router>
-
-      {/* Additional Global Scripts */}
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `
-            // Lazy loading images
-            document.addEventListener('DOMContentLoaded', function() {
-              const lazyImages = [].slice.call(document.querySelectorAll('img.lazy-load'));
-              
-              if ('IntersectionObserver' in window) {
-                let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
-                  entries.forEach(function(entry) {
-                    if (entry.isIntersecting) {
-                      let lazyImage = entry.target;
-                      lazyImage.src = lazyImage.dataset.src;
-                      lazyImage.classList.remove('lazy-load');
-                      lazyImage.classList.add('loaded');
-                      lazyImageObserver.unobserve(lazyImage);
-                    }
-                  });
-                });
-
-                lazyImages.forEach(function(lazyImage) {
-                  lazyImageObserver.observe(lazyImage);
-                });
-              }
-            });
-
-            // Performance monitoring
-            window.addEventListener('load', function() {
-              // Page is fully loaded
-              console.log('Page fully loaded');
-            });
-
-            // Error handling
-            window.addEventListener('error', function(e) {
-              console.error('Global error:', e.error);
-            });
-          `
-        }}
-      />
     </div>
   );
 }

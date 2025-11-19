@@ -105,17 +105,57 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
   const [isFormValid, setIsFormValid] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [touchedFields, setTouchedFields] = useState({});
+  const [backendStatus, setBackendStatus] = useState('checking');
+  const [characterCounts, setCharacterCounts] = useState({});
   const formRef = useRef(null);
   const navigate = useNavigate();
 
-  // API URL configuration
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
-  const API_CONTACT_ENDPOINT = process.env.REACT_APP_API_CONTACT_ENDPOINT || '/api/users';
+  // Local development configuration
+  const API_BASE_URL = 'http://localhost:5001';
+  const API_CONTACT_ENDPOINT = '/api/users';
+
+  // Check backend connection on component mount
+  useEffect(() => {
+    checkBackendConnection();
+  }, []);
+
+  const checkBackendConnection = async () => {
+    try {
+      setBackendStatus('checking');
+      console.log('🔍 Checking backend connection to:', `${API_BASE_URL}/health`);
+      
+      const response = await fetch(`${API_BASE_URL}/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.database === 'Connected') {
+          setBackendStatus('connected');
+          console.log('✅ Backend is connected and running');
+        } else {
+          setBackendStatus('error');
+        }
+      } else {
+        setBackendStatus('error');
+      }
+    } catch (error) {
+      setBackendStatus('error');
+      console.log('❌ Backend connection error:', error.message);
+    }
+  };
+
+  const handleRetryConnection = () => {
+    checkBackendConnection();
+  };
 
   // Enhanced validation patterns with better international support
   const validationPatterns = useMemo(() => VALIDATION_PATTERNS, []);
 
-  // Field validation helper - MOVED BEFORE handleFormOnChange to fix "used before defined" error
+  // Field validation helper
   const validateField = useCallback((field) => {
     const trimmedValue = field.value.trim();
     const newField = { ...field, error: false, mess: '' };
@@ -178,6 +218,11 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
           error: false,
           mess: ''
         };
+        
+        // Update character count for message field
+        if (title === 'Message') {
+          setCharacterCounts(prev => ({ ...prev, message: val.length }));
+        }
         
         // Immediate validation for touched fields
         if (touchedFields[title]) {
@@ -244,8 +289,19 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       .filter(field => field.required)
       .every(field => field.value.trim() !== '');
     
-    setIsFormValid(!hasErrors && requiredFieldsFilled);
-  }, [formFieldData]);
+    setIsFormValid(!hasErrors && requiredFieldsFilled && backendStatus === 'connected');
+  }, [formFieldData, backendStatus]);
+
+  // Initialize character counts
+  useEffect(() => {
+    const initialCounts = {};
+    formFieldData.forEach(field => {
+      if (field.maxLength) {
+        initialCounts[field.title] = field.value.length;
+      }
+    });
+    setCharacterCounts(initialCounts);
+  }, []);
 
   // Navigation handler to go back to services
   const navigateToServices = useCallback(() => {
@@ -256,6 +312,15 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
   const handleContactFormSubmit = useCallback(async (e) => {
     e.preventDefault();
     
+    if (backendStatus !== 'connected') {
+      safeSetShowMessage({ 
+        success: false, 
+        error: true, 
+        message: 'Backend server is not connected. Please make sure the backend is running on localhost:5001' 
+      });
+      return;
+    }
+
     // Clear any previous messages when starting new submission
     safeSetShowMessage(null);
     setIsSubmitting(true);
@@ -312,6 +377,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
         // Reset form
         setFormFieldData(INITIAL_FORM_DATA);
         setTouchedFields({});
+        setCharacterCounts({});
         if (formRef.current) {
           formRef.current.reset();
         }
@@ -325,11 +391,9 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       let userFriendlyMessage = error.message;
       
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        userFriendlyMessage = 'Cannot connect to server. Please make sure the backend is running.';
+        userFriendlyMessage = 'Cannot connect to server. Please make sure the backend is running on localhost:5001';
       } else if (error.message.includes('Failed to fetch')) {
-        userFriendlyMessage = 'Network error: Please check if the backend server is running.';
-      } else if (error.message.includes('Network error')) {
-        userFriendlyMessage = 'Network connection issue. Please check your internet connection.';
+        userFriendlyMessage = 'Network error: Please check if the backend server is running on http://localhost:5001';
       } else if (error.message.includes('Email already exists')) {
         userFriendlyMessage = 'This email is already registered. Please use a different email address.';
       }
@@ -342,12 +406,13 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formFieldData, handleFormValidation, safeSetShowMessage, API_BASE_URL, API_CONTACT_ENDPOINT]);
+  }, [formFieldData, handleFormValidation, safeSetShowMessage, backendStatus]);
 
   // Reset form function
   const handleResetForm = useCallback(() => {
     setFormFieldData(INITIAL_FORM_DATA);
     setTouchedFields({});
+    setCharacterCounts({});
     if (formRef.current) {
       formRef.current.reset();
     }
@@ -362,6 +427,46 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       minHeight: "100vh",
       fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
       backgroundColor: '#fafbff'
+    },
+
+    // Backend Status Styles
+    backendStatus: {
+      padding: '1rem',
+      borderRadius: '8px',
+      margin: '1rem auto',
+      textAlign: 'center',
+      width: '90%',
+      maxWidth: '500px',
+      boxSizing: 'border-box',
+      fontSize: '14px',
+      fontWeight: '600'
+    },
+    checkingStatus: {
+      backgroundColor: '#fefcbf',
+      border: '1px solid #f6e05e',
+      color: '#744210'
+    },
+    connectedStatus: {
+      backgroundColor: '#c6f6d5',
+      border: '1px solid #68d391',
+      color: '#22543d'
+    },
+    errorStatus: {
+      backgroundColor: '#fed7d7',
+      border: '1px solid #feb2b2',
+      color: '#c53030'
+    },
+    retryButton: {
+      padding: '8px 16px',
+      backgroundColor: '#0802A3',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      fontSize: '12px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      marginLeft: '10px',
+      transition: 'all 0.3s ease'
     },
 
     // Hero section styles
@@ -449,7 +554,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
     formContainer: {
       width: '100%',
       maxWidth: '1400px',
-      margin: '50px auto',
+      margin: '20px auto',
       padding: '20px',
       boxSizing: 'border-box',
       display: "flex",
@@ -509,7 +614,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       borderRadius: '12px',
       fontFamily: 'inherit',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      backgroundColor: '#ffffff',
+      backgroundColor: backendStatus === 'connected' ? '#ffffff' : '#f7fafc',
       width: '100%',
       boxSizing: 'border-box'
     },
@@ -522,7 +627,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       borderRadius: '12px',
       fontFamily: 'inherit',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      backgroundColor: '#ffffff',
+      backgroundColor: backendStatus === 'connected' ? '#ffffff' : '#f7fafc',
       width: '100%',
       boxSizing: 'border-box',
       minHeight: '140px',
@@ -554,9 +659,9 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
     // Button styles
     primaryButton: {
       padding: '14px 32px',
-      background: 'linear-gradient(135deg, #0802A3 0%, #4A00E0 100%)',
+      background: backendStatus === 'connected' ? 'linear-gradient(135deg, #0802A3 0%, #4A00E0 100%)' : '#718096',
       color: '#fff',
-      cursor: 'pointer',
+      cursor: backendStatus === 'connected' && !isSubmitting ? 'pointer' : 'not-allowed',
       border: 'none',
       borderRadius: '8px',
       fontSize: '14px',
@@ -574,7 +679,8 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       alignItems: 'center',
       justifyContent: 'center',
       gap: '8px',
-      minHeight: '44px'
+      minHeight: '44px',
+      opacity: (backendStatus !== 'connected' || isSubmitting) ? 0.6 : 1
     },
 
     secondaryButton: {
@@ -763,8 +869,16 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       width: '100%',
       maxWidth: '220px',
       alignItems: 'center'
+    },
+
+    connectionInfo: {
+      fontSize: '12px',
+      color: '#718096',
+      textAlign: 'center',
+      marginTop: '10px',
+      fontStyle: 'italic'
     }
-  }), [imageLoaded]);
+  }), [imageLoaded, backendStatus, isSubmitting]);
 
   // SVG icons
   const LocationIcon = () => (
@@ -822,11 +936,6 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       to { transform: translateX(0); opacity: 1; }
     }
     
-    @keyframes shimmer {
-      0% { background-position: -1000px 0; }
-      100% { background-position: 1000px 0; }
-    }
-    
     .form-section::before {
       content: '';
       position: absolute;
@@ -841,16 +950,6 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
     
     .form-section:hover::before {
       transform: scaleX(1);
-    }
-    
-    .form-section:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 30px 60px rgba(8,2,163,0.15);
-    }
-    
-    .contact-right:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 30px 60px rgba(8,2,163,0.15);
     }
     
     .primary-button:hover:not(:disabled) {
@@ -873,10 +972,6 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       color: #444;
     }
     
-    .primary-button:active:not(:disabled) {
-      transform: translateY(0);
-    }
-    
     .input-field:focus {
       outline: none;
       border-color: #0802A3;
@@ -884,9 +979,10 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       box-shadow: 0 0 0 3px rgba(8,2,163,0.1);
     }
     
-    .contact-image-loaded {
-      transform: scale(1);
-      transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    .input-field:disabled {
+      background-color: #f7fafc;
+      color: #a0aec0;
+      cursor: not-allowed;
     }
     
     .success-message {
@@ -899,18 +995,6 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       display: flex;
       align-items: center;
       gap: 10px;
-    }
-    
-    /* Loading animation for submit button */
-    .submitting::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-      animation: shimmer 1.5s infinite;
     }
     
     .input-error {
@@ -926,12 +1010,6 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       opacity: 0.6;
       cursor: not-allowed;
       transform: none !important;
-    }
-    
-    .button:disabled:hover {
-      transform: none !important;
-      box-shadow: 0 2px 8px rgba(8,2,163,0.2) !important;
-      animation: none !important;
     }
     
     @media (max-width: 768px) {
@@ -969,37 +1047,34 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
         max-width: calc(100% - 20px);
       }
     }
-    
-    /* Reduced motion support */
-    @media (prefers-reduced-motion: reduce) {
-      .form-section,
-      .contact-right,
-      .primary-button,
-      .secondary-button,
-      .tertiary-button,
-      .input-field {
-        transition: none;
-        animation: none;
-      }
-      
-      .contact-image-loaded {
-        transition: none;
-      }
-    }
-    
-    /* High contrast mode */
-    @media (prefers-contrast: high) {
-      .input-field:focus {
-        outline: 2px solid #0802A3;
-        border-color: #0802A3;
-      }
-      
-      .form-section,
-      .contact-right {
-        border: 2px solid #0802A3;
-      }
-    }
   `;
+
+  const getStatusMessage = () => {
+    switch (backendStatus) {
+      case 'checking':
+        return {
+          message: '🔄 Checking backend connection...',
+          style: { ...styles.backendStatus, ...styles.checkingStatus }
+        };
+      case 'connected':
+        return {
+          message: '✅ Backend connected - Data will be saved permanently to MongoDB',
+          style: { ...styles.backendStatus, ...styles.connectedStatus }
+        };
+      case 'error':
+        return {
+          message: '❌ Backend not connected - Form submission disabled',
+          style: { ...styles.backendStatus, ...styles.errorStatus }
+        };
+      default:
+        return {
+          message: '🔍 Checking connection...',
+          style: { ...styles.backendStatus, ...styles.checkingStatus }
+        };
+    }
+  };
+
+  const statusInfo = getStatusMessage();
 
   return (
     <div style={styles.contactContainer} role="main" aria-label="Contact Us">
@@ -1019,6 +1094,28 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
           <span>{safeShowMessage.message}</span>
         </div>
       )}
+
+      {/* Backend Connection Status */}
+      <div style={statusInfo.style}>
+        {statusInfo.message}
+        {backendStatus === 'error' && (
+          <button 
+            type="button"
+            style={styles.retryButton}
+            onClick={handleRetryConnection}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = '#4A00E0';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = '#0802A3';
+              e.target.style.transform = 'translateY(0)';
+            }}
+          >
+            Retry Connection
+          </button>
+        )}
+      </div>
 
       {/* Hero Section */}
       <section style={styles.contactUsTitle} className="contact-hero" aria-labelledby="contact-hero-title">
@@ -1079,9 +1176,10 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
                     aria-describedby={elem.error ? `error-${elem.id}` : undefined}
                     aria-invalid={elem.error}
                     autoComplete={elem.autoComplete}
+                    disabled={isSubmitting || backendStatus !== 'connected'}
                   />
                   <div style={styles.characterCount}>
-                    {elem.value.length}/{elem.maxLength}
+                    {characterCounts[elem.title] || 0}/{elem.maxLength}
                   </div>
                 </>
               ) : (
@@ -1102,6 +1200,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
                   aria-describedby={elem.error ? `error-${elem.id}` : undefined}
                   aria-invalid={elem.error}
                   autoComplete={elem.autoComplete}
+                  disabled={isSubmitting || backendStatus !== 'connected'}
                 />
               )}
               {elem.error && (
@@ -1126,13 +1225,9 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
               <button 
                 type="submit" 
                 onClick={handleContactFormSubmit} 
-                style={{
-                  ...styles.primaryButton,
-                  ...(isSubmitting ? { cursor: 'wait' } : {}),
-                  ...(!isFormValid || isSubmitting ? { opacity: 0.6 } : {})
-                }}
-                className={`primary-button ${isSubmitting ? 'submitting' : ''}`}
-                disabled={isSubmitting || !isFormValid}
+                style={styles.primaryButton}
+                className="primary-button"
+                disabled={isSubmitting || backendStatus !== 'connected' || !isFormValid}
                 aria-label={isSubmitting ? 'Sending message...' : 'Send message'}
               >
                 {isSubmitting ? (
@@ -1142,6 +1237,11 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
                       <path d="M12 6v6l4 2"/>
                     </svg>
                     Sending...
+                  </>
+                ) : backendStatus !== 'connected' ? (
+                  <>
+                    <span>🔌</span>
+                    Backend Offline
                   </>
                 ) : (
                   <>
@@ -1157,6 +1257,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
                 className="tertiary-button"
                 onClick={handleResetForm}
                 aria-label="Reset form"
+                disabled={isSubmitting}
               >
                 <ResetIcon />
                 Reset Form
@@ -1172,6 +1273,13 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
                 <BackIcon />
                 Back to Services
               </button>
+            </div>
+            
+            <div style={styles.connectionInfo}>
+              {backendStatus === 'connected' 
+                ? '✅ Connected to backend - Data will be saved to MongoDB'
+                : '🔌 Backend connection required to save data'
+              }
             </div>
           </div>
         </form>

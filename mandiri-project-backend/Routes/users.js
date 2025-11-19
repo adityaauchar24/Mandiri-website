@@ -32,15 +32,23 @@ router.get('/', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error fetching users',
-            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
+            error: error.message
         });
     }
 });
 
-// POST create new user (Contact Form)
+// POST create new user (Contact Form) - FIXED: Added status field
 router.post('/', async (req, res) => {
     try {
         const { fullName, email, phoneNumber, companyName, message } = req.body;
+
+        // Basic validation
+        if (!fullName || !email || !phoneNumber || !companyName || !message) {
+            return res.status(400).json({
+                success: false,
+                message: 'All fields are required'
+            });
+        }
 
         // Check if email already exists
         const existingUser = await User.findOne({ email: email.toLowerCase() });
@@ -51,14 +59,15 @@ router.post('/', async (req, res) => {
             });
         }
 
-        // Create new user
+        // Create new user with status field
         const newUser = new User({
-            fullName,
-            email: email.toLowerCase(),
-            phoneNumber,
-            companyName,
-            message,
-            source: 'website'
+            fullName: fullName.trim(),
+            email: email.toLowerCase().trim(),
+            phoneNumber: phoneNumber.trim(),
+            companyName: companyName.trim(),
+            message: message.trim(),
+            source: 'website',
+            status: 'pending' // ADDED THIS FIELD
         });
 
         // Save to database
@@ -93,7 +102,7 @@ router.post('/', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to send message. Please try again.',
-            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
+            error: error.message
         });
     }
 });
@@ -118,7 +127,7 @@ router.get('/:id', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error fetching user',
-            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
+            error: error.message
         });
     }
 });
@@ -160,7 +169,7 @@ router.patch('/:id/status', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error updating user status',
-            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
+            error: error.message
         });
     }
 });
@@ -185,7 +194,7 @@ router.delete('/:id', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error deleting user',
-            error: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message
+            error: error.message
         });
     }
 });

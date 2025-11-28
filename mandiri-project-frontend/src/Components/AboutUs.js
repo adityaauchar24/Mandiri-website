@@ -236,7 +236,7 @@ const AboutUs = () => {
       margin: 0
     },
 
-    // Video Section - UPDATED WITH SMALL TRANSPARENT BUTTONS
+    // Video Section
     videoSection: {
       position: 'relative',
       padding: '0 clamp(1rem, 4vw, 4rem)',
@@ -271,7 +271,7 @@ const AboutUs = () => {
       display: 'block'
     },
 
-    // NEW: Small transparent play button in bottom-left
+    // Small transparent play button in bottom-left
     smallPlayButton: {
       position: 'absolute',
       bottom: '15px',
@@ -292,7 +292,7 @@ const AboutUs = () => {
       zIndex: 10
     },
 
-    // NEW: Small transparent video indicator
+    // Small transparent video indicator
     videoIndicator: {
       position: 'absolute',
       top: '12px',
@@ -326,7 +326,7 @@ const AboutUs = () => {
       zIndex: 2
     },
 
-    // UPDATED Mission Section Styles with equal height cards
+    // Mission Section Styles with equal height cards
     visionMissionSection: {
       position: 'relative',
       padding: 'clamp(5rem, 10vw, 8rem) clamp(1rem, 4vw, 4rem)',
@@ -371,7 +371,7 @@ const AboutUs = () => {
       opacity: isVisible.mission ? 1 : 0,
       transform: isVisible.mission ? 'translateY(0)' : 'translateY(50px)',
       transition: 'all 0.8s ease',
-      alignItems: 'stretch' // This ensures cards stretch to equal height
+      alignItems: 'stretch'
     },
 
     missionCard: {
@@ -385,8 +385,8 @@ const AboutUs = () => {
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
-      height: '100%', // Changed from 'fit-content' to '100%'
-      minHeight: '550px' // Added minimum height to ensure consistency
+      height: '100%',
+      minHeight: '550px'
     },
 
     cardHeader: {
@@ -433,7 +433,7 @@ const AboutUs = () => {
       display: 'flex',
       flexDirection: 'column',
       gap: '2rem',
-      flex: '1 1 auto' // This makes the content area flexible
+      flex: '1 1 auto'
     },
 
     missionPoint: {
@@ -444,7 +444,7 @@ const AboutUs = () => {
       borderRadius: '16px',
       transition: 'all 0.3s ease',
       background: 'transparent',
-      flex: '1 1 auto' // Added to ensure points take available space
+      flex: '1 1 auto'
     },
 
     pointIcon: {
@@ -552,12 +552,12 @@ const AboutUs = () => {
       
       .image-card:hover {
         transform: translateY(-15px) scale(1.03);
-        box-shadow: 0 30px 60px rgba(8, 2, 163, 0.2);
+        boxShadow: 0 30px 60px rgba(8, 2, 163, 0.2);
       }
       
       .mission-card:hover {
         transform: translateY(-8px);
-        box-shadow: 0 25px 60px rgba(8, 2, 163, 0.15);
+        boxShadow: 0 25px 60px rgba(8, 2, 163, 0.15);
         border-color: rgba(8, 2, 163, 0.15);
       }
       
@@ -728,7 +728,7 @@ const AboutUs = () => {
         </div>
       </section>
 
-      {/* Video Section - UPDATED WITH SMALL TRANSPARENT BUTTONS */}
+      {/* Video Section */}
       <section 
         id="videos"
         ref={el => sectionRefs.current[3] = el}
@@ -789,7 +789,7 @@ const AboutUs = () => {
         </div>
       </section>
 
-      {/* UPDATED Mission Section */}
+      {/* Mission Section */}
       <section 
         id="mission"
         ref={el => sectionRefs.current[4] = el}

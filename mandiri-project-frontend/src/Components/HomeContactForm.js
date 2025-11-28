@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import worldDeliveryImg from '../Images/worldDeliveryImg.jpg';
-import apiService from '../services/api';
 
 const HomeContactForm = ({ setShowMessage, showMessage }) => {
     const [formData, setFormData] = useState({
@@ -12,8 +11,9 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
     });
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [backendStatus, setBackendStatus] = useState('checking');
     const [characterCount, setCharacterCount] = useState(0);
+    const [backendStatus, setBackendStatus] = useState('checking');
+    const [backendUrl, setBackendUrl] = useState('http://localhost:5000');
 
     // Check backend connection on component mount
     useEffect(() => {
@@ -23,8 +23,21 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
     const checkBackendConnection = async () => {
         try {
             setBackendStatus('checking');
-            const healthResult = await apiService.healthCheck();
-            setBackendStatus(healthResult.status);
+            const response = await fetch(`${backendUrl}/api/health`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                setBackendStatus('connected');
+                console.log('✅ Backend connected:', data);
+            } else {
+                setBackendStatus('error');
+                console.log('❌ Backend health check failed');
+            }
         } catch (error) {
             setBackendStatus('error');
             console.error('Backend connection failed:', error);
@@ -117,15 +130,23 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                 message: formData.message.trim()
             };
 
-            console.log('📤 Sending contact form data:', submissionData);
+            console.log('📤 Sending contact form data to backend:', submissionData);
 
-            const result = await apiService.submitContactForm(submissionData);
+            const response = await fetch(`${backendUrl}/api/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(submissionData)
+            });
 
-            if (result.success) {
+            const result = await response.json();
+
+            if (response.ok && result.success) {
                 setShowMessage({ 
                     show: true,
                     success: true, 
-                    message: result.message || 'Thank you! Your message has been sent successfully.' 
+                    message: result.message || 'Thank you! Your message has been sent successfully and saved to MongoDB Atlas.' 
                 });
                 
                 // Reset form
@@ -139,28 +160,50 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                 
                 setCharacterCount(0);
                 setErrors({});
+                
+                console.log('✅ Form data saved to MongoDB Atlas successfully:', result.data);
             } else {
-                throw new Error(result.message || 'Failed to send message');
+                // Handle backend validation errors
+                if (result.errors && Array.isArray(result.errors)) {
+                    const backendErrors = {};
+                    result.errors.forEach(error => {
+                        if (error.includes('email')) backendErrors.email = error;
+                        else if (error.includes('name')) backendErrors.fullName = error;
+                        else if (error.includes('phone')) backendErrors.phoneNumber = error;
+                        else if (error.includes('company')) backendErrors.companyName = error;
+                        else if (error.includes('message')) backendErrors.message = error;
+                    });
+                    setErrors(backendErrors);
+                    throw new Error('Please check the form for errors');
+                }
+                throw new Error(result.message || result.error || 'Failed to send message');
             }
         } catch (error) {
-            console.error('Form submission error:', error);
+            console.error('❌ Form submission error:', error);
             
             let userFriendlyMessage = 'Failed to send message. Please try again.';
             
-            // Handle specific error cases
+            // Handle specific error cases from your backend
             if (error.message.includes('Email already exists') || 
                 error.message.includes('email already exists') ||
                 error.message.includes('duplicate') ||
                 error.message.includes('already registered')) {
-                userFriendlyMessage =  'Invalid data submitted. Please check your information and try again.' ;
-            } else if (error.message.includes('Network error')) {
+                userFriendlyMessage = 'This email address is already registered. Please use a different email address.';
+                setErrors(prev => ({ ...prev, email: 'Email already exists' }));
+            } else if (error.message.includes('Network error') || 
+                       error.message.includes('Failed to fetch') ||
+                       error.message.includes('fetch')) {
                 userFriendlyMessage = 'Cannot connect to server. Please check if the backend server is running.';
             } else if (error.message.includes('Request timeout')) {
                 userFriendlyMessage = 'Server is taking too long to respond. Please try again later.';
+            } else if (error.message.includes('404') || error.message.includes('Not Found')) {
+                userFriendlyMessage = 'Contact endpoint not found. Please check backend routes.';
             } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
-                userFriendlyMessage = 'This email address is already registered. Please use a different email address.';
+                userFriendlyMessage = 'Invalid data submitted. Please check your information and try again.';
             } else if (error.message.includes('500') || error.message.includes('Server error')) {
                 userFriendlyMessage = 'Server error occurred. Please try again later.';
+            } else if (error.message.includes('All fields are required')) {
+                userFriendlyMessage = 'Please fill in all required fields.';
             } else {
                 userFriendlyMessage = error.message || 'Failed to send message. Please try again.';
             }
@@ -185,6 +228,26 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
             success: false,
             message: 'Please start the backend server manually. Run: cd mandiri-project-backend && npm start'
         });
+    };
+
+    // Test backend connection
+    const testBackendEndpoints = async () => {
+        console.log('🔍 Testing backend endpoints:');
+        try {
+            const response = await fetch(`${backendUrl}/api/users`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+            console.log(`   /api/users: ${response.status} ${response.statusText}`);
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`     ✅ Users endpoint working`);
+            }
+        } catch (error) {
+            console.log(`   /api/users: ❌ ERROR - ${error.message}`);
+        }
     };
 
     // Styles object
@@ -241,12 +304,19 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
             fontSize: 'clamp(24px, 3vw, 28px)',
             fontWeight: '700',
             color: '#0802A3',
-            marginBottom: '2rem',
+            marginBottom: '1rem',
             textAlign: 'center',
             background: 'linear-gradient(135deg, #0802A3, #4A00E0)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             width: '100%'
+        },
+        subheading: {
+            fontSize: '14px',
+            color: '#718096',
+            textAlign: 'center',
+            marginBottom: '2rem',
+            fontStyle: 'italic'
         },
         inputGroup: {
             marginBottom: '1.25rem',
@@ -372,6 +442,12 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
             fontSize: '12px',
             width: '100%'
         },
+        characterCount: {
+            fontSize: '12px',
+            color: '#718096',
+            textAlign: 'right',
+            marginTop: '4px'
+        },
         retryButton: {
             padding: '8px 16px',
             backgroundColor: '#0802A3',
@@ -396,11 +472,31 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
             marginLeft: '10px',
             transition: 'all 0.3s ease'
         },
-        characterCount: {
-            fontSize: '12px',
-            color: '#718096',
-            textAlign: 'right',
-            marginTop: '4px'
+        testEndpointsButton: {
+            padding: '6px 12px',
+            backgroundColor: '#805ad5',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            fontSize: '11px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            marginLeft: '8px',
+            transition: 'all 0.3s ease'
+        },
+        backendStatusContainer: {
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            alignItems: 'center',
+            marginBottom: '20px'
+        },
+        backendStatusButtons: {
+            display: 'flex',
+            gap: '8px',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            marginTop: '8px'
         }
     };
 
@@ -454,7 +550,7 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                 };
             case 'connected':
                 return {
-                    message: '✅ Backend connected - Data will be saved to MongoDB',
+                    message: '✅ Backend connected - Ready to save data to MongoDB Atlas',
                     style: { ...styles.backendStatus, ...styles.connectedStatus }
                 };
             case 'error':
@@ -484,38 +580,12 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                         noValidate
                     >
                         <h2 style={styles.heading}>Get In Touch</h2>
+                        <div style={styles.subheading}>
+                            Connect with PT. International Mandiri Expo
+                        </div>
                         
                         {/* Backend Status */}
-                        {/* <div style={statusInfo.style}>
-                            {statusInfo.message}
-                            {backendStatus === 'error' && (
-                                <>
-                                    <button 
-                                        type="button"
-                                        style={styles.retryButton}
-                                        onClick={handleRetryConnection}
-                                    >
-                                        Retry
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        style={styles.startServerButton}
-                                        onClick={startBackendServer}
-                                    >
-                                        Start Backend
-                                    </button>
-                                </>
-                            )}
-                            {backendStatus === 'checking' && (
-                                <button 
-                                    type="button"
-                                    style={styles.retryButton}
-                                    onClick={handleRetryConnection}
-                                >
-                                    Retry
-                                </button>
-                            )}
-                        </div> */}
+                        
                         
                         {showMessage?.show && (
                             <div style={showMessage.success ? styles.successMessage : styles.errorMessage}>
@@ -570,7 +640,7 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                             {isSubmitting ? (
                                 <>
                                     <span style={{marginRight: '8px'}}>⏳</span>
-                                    Sending...
+                                    Sending to Database...
                                 </>
                             ) : backendStatus !== 'connected' ? (
                                 <>
@@ -579,14 +649,14 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
                                 </>
                             ) : (
                                 <>
-                                    <span style={{marginRight: '8px'}}>📨</span>
-                                    Send Message
+                                    <span style={{marginRight: '8px'}}>💾</span>
+                                    Save to MongoDB Atlas
                                 </>
                             )}
                         </button>
                         
                         <div style={styles.requiredText}>
-                            * Required fields | {backendStatus === 'connected' ? 'Data will be saved permanently to MongoDB database' : 'Backend connection required to save data'}
+                            * Required fields | {backendStatus === 'connected' ? '✅ Data will be saved permanently to MongoDB Atlas' : '🔌 Backend connection required to save data'}
                         </div>
                     </form>
                 </div>

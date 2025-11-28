@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import aboutUsCoconutImg from '../Images/aboutUsCoconutImg.jpg';
-import apiService from '../services/api';
 
 // Constants for better maintainability
 const INITIAL_FORM_DATA = [
@@ -106,8 +105,9 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
   const [isFormValid, setIsFormValid] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [touchedFields, setTouchedFields] = useState({});
-  const [backendStatus, setBackendStatus] = useState('checking');
   const [characterCounts, setCharacterCounts] = useState({});
+  const [backendStatus, setBackendStatus] = useState('checking');
+  const [backendUrl, setBackendUrl] = useState('http://localhost:5000');
   const formRef = useRef(null);
   const navigate = useNavigate();
 
@@ -119,27 +119,25 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
   const checkBackendConnection = async () => {
     try {
       setBackendStatus('checking');
-      const healthResult = await apiService.healthCheck();
-      setBackendStatus(healthResult.status);
+      const response = await fetch(`${backendUrl}/api/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
-      if (healthResult.status === 'error') {
-        console.log('🔧 Backend connection failed:', healthResult.error);
+      if (response.ok) {
+        const data = await response.json();
+        setBackendStatus('connected');
+        console.log('✅ Backend connected:', data);
+      } else {
+        setBackendStatus('error');
+        console.log('❌ Backend health check failed');
       }
     } catch (error) {
       setBackendStatus('error');
       console.error('Backend connection failed:', error);
     }
-  };
-
-  const handleRetryConnection = () => {
-    checkBackendConnection();
-  };
-
-  const startBackendServer = () => {
-    safeSetShowMessage({
-      success: false,
-      message: 'Please start the backend server manually. Run: cd mandiri-project-backend && npm start'
-    });
   };
 
   // Field validation helper
@@ -276,8 +274,8 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       .filter(field => field.required)
       .every(field => field.value.trim() !== '');
     
-    setIsFormValid(!hasErrors && requiredFieldsFilled && backendStatus === 'connected');
-  }, [formFieldData, backendStatus]);
+    setIsFormValid(!hasErrors && requiredFieldsFilled);
+  }, [formFieldData]);
 
   // Initialize character counts
   useEffect(() => {
@@ -295,12 +293,28 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
     navigate('/services');
   }, [navigate]);
 
-  // Form submission
+  // Handle retry connection
+  const handleRetryConnection = () => {
+    checkBackendConnection();
+  };
+
+  // Start backend server instructions
+  const startBackendServer = () => {
+    safeSetShowMessage({
+      show: true,
+      success: false,
+      message: 'Please start the backend server manually. Run: cd mandiri-backend && npm start'
+    });
+  };
+
+  // Form submission - BACKEND CONNECTED VERSION
   const handleContactFormSubmit = useCallback(async (e) => {
     e.preventDefault();
     
+    // Check backend connection first
     if (backendStatus !== 'connected') {
       safeSetShowMessage({ 
+        show: true,
         success: false, 
         message: 'Backend server is not connected. Please start the backend server first.' 
       });
@@ -317,25 +331,35 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
     }
 
     try {
-      console.log('📤 Sending contact form data...');
+      console.log('📤 Preparing to submit contact form to backend...');
       
-      // Transform form data to match backend expectations
+      // Transform form data for backend submission
       const submissionData = {
         fullName: formFieldData.find(field => field.title === 'Full Name')?.value.trim() || '',
         email: formFieldData.find(field => field.title === 'Email')?.value.trim().toLowerCase() || '',
         phoneNumber: formFieldData.find(field => field.title === 'Phone Number')?.value.trim() || '',
         companyName: formFieldData.find(field => field.title === 'Company Name')?.value.trim() || '',
-        message: formFieldData.find(field => field.title === 'Message')?.value.trim() || ''
+        message: formFieldData.find(field => field.title === 'Message')?.value.trim() || '',
+        source: 'contact-us-page'
       };
 
-      console.log('📝 Submission data:', submissionData);
+      console.log('📤 Sending contact form data to backend:', submissionData);
 
-      const result = await apiService.submitContactForm(submissionData);
+      const response = await fetch(`${backendUrl}/api/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(submissionData)
+      });
 
-      if (result.success) {
+      const result = await response.json();
+
+      if (response.ok && result.success) {
         safeSetShowMessage({ 
+          show: true,
           success: true, 
-          message: result.message || 'Thank you! Your message has been sent successfully.' 
+          message: result.message || 'Thank you! Your message has been sent successfully and saved to MongoDB Atlas.' 
         });
         
         // Reset form
@@ -345,40 +369,77 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
         if (formRef.current) {
           formRef.current.reset();
         }
+        
+        console.log('✅ Contact form data saved to MongoDB Atlas successfully:', result.data);
       } else {
-        throw new Error(result.message || 'Failed to send message');
+        // Handle backend validation errors
+        if (result.errors && Array.isArray(result.errors)) {
+          const backendErrors = {};
+          result.errors.forEach(error => {
+            if (error.includes('email')) backendErrors.email = error;
+            else if (error.includes('name')) backendErrors.fullName = error;
+            else if (error.includes('phone')) backendErrors.phoneNumber = error;
+            else if (error.includes('company')) backendErrors.companyName = error;
+            else if (error.includes('message')) backendErrors.message = error;
+          });
+          
+          // Update form errors
+          setFormFieldData(prev => prev.map(field => {
+            if (backendErrors[field.title]) {
+              return { ...field, error: true, mess: backendErrors[field.title] };
+            }
+            return field;
+          }));
+          
+          throw new Error('Please check the form for errors');
+        }
+        throw new Error(result.message || result.error || 'Failed to send message');
       }
     } catch (error) {
-      console.error('❌ Error submitting form:', error);
+      console.error('❌ Contact form submission error:', error);
       
       let userFriendlyMessage = 'Failed to send message. Please try again.';
       
-      // Handle specific error cases
+      // Handle specific error cases from your backend
       if (error.message.includes('Email already exists') || 
           error.message.includes('email already exists') ||
           error.message.includes('duplicate') ||
           error.message.includes('already registered')) {
-        userFriendlyMessage = 'Invalid data submitted. Please check your information and try again.';
-      } else if (error.message.includes('Network error')) {
-        userFriendlyMessage = 'Cannot connect to server. Please check if the backend server is running.';
+        userFriendlyMessage = 'This email address is already registered. Please use a different email address.';
+        
+        // Update email field error
+        setFormFieldData(prev => prev.map(field => 
+          field.title === 'Email' 
+            ? { ...field, error: true, mess: 'Email already exists' }
+            : field
+        ));
+      } else if (error.message.includes('Network error') || 
+                 error.message.includes('Failed to fetch') ||
+                 error.message.includes('fetch')) {
+        userFriendlyMessage = 'Cannot connect to server. Please check if the backend server is running on localhost:5000.';
       } else if (error.message.includes('Request timeout')) {
         userFriendlyMessage = 'Server is taking too long to respond. Please try again later.';
+      } else if (error.message.includes('404') || error.message.includes('Not Found')) {
+        userFriendlyMessage = 'Contact endpoint not found. Please check backend routes.';
       } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
-        userFriendlyMessage = 'This email address is already registered. Please use a different email address.'  ;
+        userFriendlyMessage = 'Invalid data submitted. Please check your information and try again.';
       } else if (error.message.includes('500') || error.message.includes('Server error')) {
         userFriendlyMessage = 'Server error occurred. Please try again later.';
+      } else if (error.message.includes('All fields are required')) {
+        userFriendlyMessage = 'Please fill in all required fields.';
       } else {
         userFriendlyMessage = error.message || 'Failed to send message. Please try again.';
       }
     
       safeSetShowMessage({ 
+        show: true,
         success: false, 
         message: userFriendlyMessage 
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [formFieldData, handleFormValidation, safeSetShowMessage, backendStatus]);
+  }, [formFieldData, handleFormValidation, safeSetShowMessage, backendStatus, backendUrl]);
 
   // Reset form function
   const handleResetForm = useCallback(() => {
@@ -391,6 +452,26 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
     safeSetShowMessage({ show: false });
   }, [safeSetShowMessage]);
 
+  // Test backend connection
+  const testBackendEndpoints = async () => {
+    console.log('🔍 Testing backend endpoints:');
+    try {
+      const response = await fetch(`${backendUrl}/api/users`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log(`   /api/users: ${response.status} ${response.statusText}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`     ✅ Users endpoint working`);
+      }
+    } catch (error) {
+      console.log(`   /api/users: ❌ ERROR - ${error.message}`);
+    }
+  };
+
   // Memoized styles for better performance
   const styles = useMemo(() => ({
     // Main container style
@@ -399,58 +480,6 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       minHeight: "100vh",
       fontFamily: "'Inter', 'Segoe UI', 'Roboto', sans-serif",
       backgroundColor: '#fafbff'
-    },
-
-    // Backend Status Styles
-    backendStatus: {
-      padding: '1rem',
-      borderRadius: '8px',
-      margin: '1rem auto',
-      textAlign: 'center',
-      width: '90%',
-      maxWidth: '500px',
-      boxSizing: 'border-box',
-      fontSize: '14px',
-      fontWeight: '600'
-    },
-    checkingStatus: {
-      backgroundColor: '#fefcbf',
-      border: '1px solid #f6e05e',
-      color: '#744210'
-    },
-    connectedStatus: {
-      backgroundColor: '#c6f6d5',
-      border: '1px solid #68d391',
-      color: '#22543d'
-    },
-    errorStatus: {
-      backgroundColor: '#fed7d7',
-      border: '1px solid #feb2b2',
-      color: '#c53030'
-    },
-    retryButton: {
-      padding: '8px 16px',
-      backgroundColor: '#0802A3',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      fontSize: '12px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      marginLeft: '10px',
-      transition: 'all 0.3s ease'
-    },
-    startServerButton: {
-      padding: '8px 16px',
-      backgroundColor: '#2d3748',
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      fontSize: '12px',
-      fontWeight: '600',
-      cursor: 'pointer',
-      marginLeft: '10px',
-      transition: 'all 0.3s ease'
     },
 
     // Hero section styles
@@ -598,7 +627,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       borderRadius: '12px',
       fontFamily: 'inherit',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      backgroundColor: backendStatus === 'connected' ? '#ffffff' : '#f7fafc',
+      backgroundColor: '#ffffff',
       width: '100%',
       boxSizing: 'border-box'
     },
@@ -611,7 +640,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       borderRadius: '12px',
       fontFamily: 'inherit',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      backgroundColor: backendStatus === 'connected' ? '#ffffff' : '#f7fafc',
+      backgroundColor: '#ffffff',
       width: '100%',
       boxSizing: 'border-box',
       minHeight: '140px',
@@ -643,9 +672,9 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
     // Button styles
     primaryButton: {
       padding: '14px 32px',
-      background: backendStatus === 'connected' ? 'linear-gradient(135deg, #0802A3 0%, #4A00E0 100%)' : '#718096',
+      background: 'linear-gradient(135deg, #0802A3 0%, #4A00E0 100%)',
       color: '#fff',
-      cursor: backendStatus === 'connected' && !isSubmitting ? 'pointer' : 'not-allowed',
+      cursor: !isSubmitting && backendStatus === 'connected' ? 'pointer' : 'not-allowed',
       border: 'none',
       borderRadius: '8px',
       fontSize: '14px',
@@ -664,7 +693,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       justifyContent: 'center',
       gap: '8px',
       minHeight: '44px',
-      opacity: (backendStatus !== 'connected' || isSubmitting) ? 0.6 : 1
+      opacity: isSubmitting || backendStatus !== 'connected' ? 0.6 : 1
     },
 
     secondaryButton: {
@@ -794,6 +823,75 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       lineHeight: '1.6'
     },
 
+    // Backend status styles
+    backendStatus: {
+      padding: '12px 16px',
+      borderRadius: '8px',
+      marginBottom: '20px',
+      textAlign: 'center',
+      width: '100%',
+      boxSizing: 'border-box',
+      fontSize: '14px',
+      fontWeight: '600'
+    },
+
+    checkingStatus: {
+      backgroundColor: '#fefcbf',
+      border: '1px solid #f6e05e',
+      color: '#744210'
+    },
+
+    connectedStatus: {
+      backgroundColor: '#c6f6d5',
+      border: '1px solid #68d391',
+      color: '#22543d'
+    },
+
+    errorStatus: {
+      backgroundColor: '#fed7d7',
+      border: '1px solid #feb2b2',
+      color: '#c53030'
+    },
+
+    retryButton: {
+      padding: '6px 12px',
+      backgroundColor: '#0802A3',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      fontSize: '11px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      marginLeft: '8px',
+      transition: 'all 0.3s ease'
+    },
+
+    startServerButton: {
+      padding: '6px 12px',
+      backgroundColor: '#2d3748',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      fontSize: '11px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      marginLeft: '8px',
+      transition: 'all 0.3s ease'
+    },
+
+    testEndpointsButton: {
+      padding: '6px 12px',
+      backgroundColor: '#805ad5',
+      color: 'white',
+      border: 'none',
+      borderRadius: '4px',
+      fontSize: '11px',
+      fontWeight: '500',
+      cursor: 'pointer',
+      marginLeft: '8px',
+      transition: 'all 0.3s ease'
+    },
+
     // Success message style
     successMessage: {
       position: 'fixed',
@@ -861,9 +959,25 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
       textAlign: 'center',
       marginTop: '10px',
       fontStyle: 'italic'
-    }
-  }), [imageLoaded, backendStatus, isSubmitting]);
+    },
 
+    backendStatusContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      alignItems: 'center',
+      marginBottom: '20px'
+    },
+
+    backendStatusButtons: {
+      display: 'flex',
+      gap: '8px',
+      flexWrap: 'wrap',
+      justifyContent: 'center'
+    }
+  }), [imageLoaded, isSubmitting, backendStatus]);
+
+  // Get backend status message
   const getStatusMessage = () => {
     switch (backendStatus) {
       case 'checking':
@@ -873,18 +987,13 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
         };
       case 'connected':
         return {
-          message: '✅ Backend connected - Form submissions are active',
+          message: '✅ Backend connected - Ready to save data to MongoDB Atlas',
           style: { ...styles.backendStatus, ...styles.connectedStatus }
         };
       case 'error':
         return {
           message: '❌ Backend not connected - Please start backend server',
           style: { ...styles.backendStatus, ...styles.errorStatus }
-        };
-      case 'warning':
-        return {
-          message: '⚠️ Backend connected with warnings',
-          style: { ...styles.backendStatus, ...styles.checkingStatus }
         };
       default:
         return {
@@ -934,7 +1043,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
         
         .tertiary-button:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(102,102,102,0.15);
+          boxShadow: 0 4px 12px rgba(102,102,102,0.15);
           background: rgba(102,102,102,0.05);
           border-color: #999;
           color: #444;
@@ -1024,38 +1133,6 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
         </div>
       )}
 
-      {/* Backend Connection Status */}
-      <div style={statusInfo.style}>
-        {statusInfo.message}
-        {backendStatus === 'error' && (
-          <>
-            <button 
-              type="button"
-              style={styles.retryButton}
-              onClick={handleRetryConnection}
-            >
-              Retry Connection
-            </button>
-            <button 
-              type="button"
-              style={styles.startServerButton}
-              onClick={startBackendServer}
-            >
-              Start Backend
-            </button>
-          </>
-        )}
-        {backendStatus === 'checking' && (
-          <button 
-            type="button"
-            style={styles.retryButton}
-            onClick={handleRetryConnection}
-          >
-            Retry
-          </button>
-        )}
-      </div>
-
       {/* Hero Section */}
       <section style={styles.contactUsTitle} className="contact-hero" aria-labelledby="contact-hero-title">
         <div style={styles.overlay} aria-hidden="true"></div>
@@ -1087,6 +1164,9 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
           aria-labelledby="contact-form-title"
         >
           <h2 style={styles.formH2} id="contact-form-title">Send us a Message</h2>
+
+          {/* Backend Status */}
+          
 
           {formFieldData.map((elem) => (
             <div key={elem.id} style={styles.fieldBox}>
@@ -1166,7 +1246,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
                 onClick={handleContactFormSubmit} 
                 style={styles.primaryButton}
                 className="primary-button"
-                disabled={isSubmitting || backendStatus !== 'connected' || !isFormValid}
+                disabled={isSubmitting || !isFormValid || backendStatus !== 'connected'}
                 aria-label={isSubmitting ? 'Sending message...' : 'Send message'}
               >
                 {isSubmitting ? (
@@ -1175,11 +1255,13 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
                       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
                       <path d="M12 6v6l4 2"/>
                     </svg>
-                    Sending...
+                    Sending to Database...
                   </>
                 ) : backendStatus !== 'connected' ? (
                   <>
-                    <span>🔌</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h2v2h-2zm0-12h2v10h-2z"/>
+                    </svg>
                     Backend Offline
                   </>
                 ) : (
@@ -1187,7 +1269,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                     </svg>
-                    Send Message
+                    Save 
                   </>
                 )}
               </button>
@@ -1222,9 +1304,8 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
             
             <div style={styles.connectionInfo}>
               {backendStatus === 'connected' 
-                ? '✅ Connected to backend - Data will be saved to MongoDB'
-                : '🔌 Backend connection required to save data'
-              }
+                ? '✅ Connected to backend - Data will be saved to MongoDB Atlas' 
+                : '🔌 Backend connection required to save data'}
             </div>
           </div>
         </form>

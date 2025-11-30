@@ -8,7 +8,7 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
         phoneNumber: '',
         companyName: '',
         message: ''
-    });
+    });                                                                     
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [characterCount, setCharacterCount] = useState(0);

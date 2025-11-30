@@ -173,7 +173,7 @@ function App() {
         color: '#0802A3',
         fontSize: '1.1rem',
         fontWeight: '600'
-      }}>Loading...</p>
+      }}>Loading PT. International Mandiri Expo...</p>
       <style>
         {`
           @keyframes spin {

@@ -1,7 +1,7 @@
 {
   "name": "mandiri-frontend",
   "version": "1.0.0",
-  "description": "Frontend for PT. International Mandiri Expo - Local Development",
+  "description": "Frontend for PT. International Mandiri Expo - Production Ready",
   "private": true,
   "dependencies": {
     "bootstrap": "^5.3.2",

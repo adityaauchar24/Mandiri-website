@@ -1,25 +1,22 @@
 {
   "name": "mandiri-backend",
   "version": "1.0.0",
-  "description": "Backend API for PT. International Mandiri Expo - Local Development",
+  "description": "Backend API for PT. International Mandiri Expo - Production Ready",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "local": "nodemon index.js",
-    "server": "node index.js",
-    "mongo:start": "docker run -d -p 27017:27017 --name mongodb-local mongo:latest",
-    "mongo:stop": "docker stop mongodb-local && docker rm mongodb-local",
-    "mongo:logs": "docker logs mongodb-local"
+    "build": "echo 'No build step required'",
+    "render-start": "node index.js"
   },
   "keywords": [
     "express",
     "mongodb",
     "api",
     "backend",
-    "local-development"
+    "production"
   ],
   "author": "PT. International Mandiri Expo",
   "license": "ISC",
@@ -29,7 +26,7 @@
     "express": "^4.18.2",
     "mongoose": "^7.5.0"
   },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

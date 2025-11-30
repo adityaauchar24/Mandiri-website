@@ -13,7 +13,7 @@ const HomeContactForm = ({ setShowMessage, showMessage }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [characterCount, setCharacterCount] = useState(0);
     const [backendStatus, setBackendStatus] = useState('checking');
-    const [backendUrl, setBackendUrl] = useState(process.env.REACT_APP_API_BASE_URL || 'https://your-backend-app-name.onrender.com/api');
+    const [backendUrl, setBackendUrl] = useState(process.env.REACT_APP_API_BASE_URL || 'https://mandiri-project-backend-cnv1.onrender.com');
     // Check backend connection on component mount
     useEffect(() => {
         checkBackendConnection();

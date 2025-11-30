@@ -107,7 +107,7 @@ const ContactUs = ({ setShowMessage, showMessage }) => {
   const [touchedFields, setTouchedFields] = useState({});
   const [characterCounts, setCharacterCounts] = useState({});
   const [backendStatus, setBackendStatus] = useState('checking');
-  const [backendUrl, setBackendUrl] = useState(process.env.REACT_APP_API_BASE_URL || 'https://your-backend-app-name.onrender.com/api');
+  const [backendUrl, setBackendUrl] = useState(process.env.REACT_APP_API_BASE_URL || 'https://mandiri-project-backend-cnv1.onrender.com');
   const formRef = useRef(null);
   const navigate = useNavigate();
 
